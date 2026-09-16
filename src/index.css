@@ -1,0 +1,122 @@
+@import "tailwindcss";
+@import url('https://fonts.googleapis.com/css2?family=Raleway:ital,wght@0,200;0,300;0,400;0,500;0,600;0,700;1,200;1,500&display=swap');
+
+@theme {
+  --font-sans: 'Raleway', system-ui, -apple-system, sans-serif;
+  --font-weight-normal: 200;
+  --font-weight-medium: 500;
+  --font-weight-semibold: 500;
+  --font-weight-bold: 500;
+  --color-neutral-950: #3A3B3A;
+  --color-neutral-900: #3A3B3A;
+  --color-neutral-800: #272827;
+}
+
+:root {
+  font-family: 'Raleway', system-ui, -apple-system, sans-serif;
+  /* Increase font size of normal text by 20% (16px * 1.20 = 19.2px) */
+  font-size: 120%;
+  --font-sans: 'Raleway', system-ui, -apple-system, sans-serif;
+  color: #3A3B3A;
+}
+
+html, body {
+  font-family: 'Raleway', system-ui, -apple-system, sans-serif;
+  font-weight: 200;
+  color: #3A3B3A;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Normal text: Raleway Extra Light (200) with #3A3B3A text color */
+body,
+p,
+span,
+input,
+textarea,
+select,
+label,
+li,
+td,
+.font-normal,
+.font-extralight,
+.font-light {
+  font-family: 'Raleway', system-ui, -apple-system, sans-serif;
+  font-weight: 200;
+  color: #3A3B3A;
+}
+
+/* Bolder text: Raleway Medium (500) with #3A3B3A text color */
+.font-medium,
+.font-semibold,
+.font-bold,
+.font-extrabold,
+b,
+strong,
+h1,
+h2,
+h3,
+h4,
+h5,
+h6,
+th {
+  font-family: 'Raleway', system-ui, -apple-system, sans-serif;
+  font-weight: 500 !important;
+  color: #3A3B3A;
+}
+
+/* Tailwind text colors mapped to #3A3B3A */
+.text-neutral-950,
+.text-neutral-900,
+.text-neutral-800,
+.text-neutral-700 {
+  color: #3A3B3A !important;
+}
+
+/* Button backgrounds to #3A3B3A */
+.bg-neutral-950,
+.bg-neutral-900,
+.bg-black {
+  background-color: #3A3B3A !important;
+}
+
+.hover\:bg-neutral-800:hover,
+.hover\:bg-neutral-900:hover {
+  background-color: #272827 !important;
+}
+
+.hover\:border-neutral-900:hover,
+.focus\:border-neutral-950:focus {
+  border-color: #3A3B3A !important;
+}
+
+/* Ensure contrast: elements explicitly specifying text-white remain crisp white */
+.text-white,
+.text-white *,
+.text-white span,
+.text-white p,
+.text-white svg,
+button.text-white,
+button.text-white *,
+.bg-neutral-950.text-white,
+.bg-neutral-950.text-white *,
+.bg-neutral-950 .text-white,
+.bg-neutral-950 .text-white * {
+  color: #FFFFFF !important;
+}
+
+/* Arbitrary pixel sizes scaled up by 20% */
+.text-\[9px\] {
+  font-size: 11px !important;
+  line-height: 15px !important;
+}
+.text-\[10px\] {
+  font-size: 12px !important;
+  line-height: 16px !important;
+}
+.text-\[11px\] {
+  font-size: 13.2px !important;
+  line-height: 18px !important;
+}
+
+

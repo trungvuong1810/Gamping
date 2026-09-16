@@ -1,0 +1,7 @@
+{
+  "name": "GAMPING",
+  "description": "Multi-group camping trip coordination with password-gated access, group-scoped equipment and food lists, and AI-assisted destination and gear planning.",
+  "requestFramePermissions": ["geolocation"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
+

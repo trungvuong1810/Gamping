@@ -177,7 +177,7 @@ export const EquipmentView: React.FC<EquipmentViewProps> = ({
       
       {/* Group Navigation Tabs (Cross-group visibility) */}
       <div className="border-b border-neutral-200">
-        <div className="flex items-center gap-2 overflow-x-auto pb-px">
+        <div className="flex items-center gap-2 overflow-x-auto scrollbar-none touch-scroll pb-px">
           {groups.map((grp) => {
             const isSelected = grp.id === selectedGroupId;
             const isUserGroup = grp.id === myGroupId;
@@ -190,18 +190,18 @@ export const EquipmentView: React.FC<EquipmentViewProps> = ({
                   setSelectedGroupId(grp.id);
                   setErrorMsg('');
                 }}
-                className={`px-4 py-2.5 text-xs font-semibold rounded-t-lg transition flex items-center gap-2 border-b-2 whitespace-nowrap ${
+                className={`min-h-[44px] px-4 py-2.5 text-xs font-semibold rounded-t-lg transition flex items-center gap-2 border-b-2 whitespace-nowrap shrink-0 ${
                   isSelected
-                    ? 'border-neutral-950 text-neutral-950 bg-neutral-50/70 font-semibold'
+                    ? 'border-neutral-950 text-neutral-950 bg-neutral-50/70 font-bold'
                     : 'border-transparent text-neutral-500 hover:text-neutral-800'
                 }`}
               >
                 <span>{grp.name}</span>
-                <span className="text-[11px] font-mono px-1.5 py-0.2 rounded bg-neutral-200/80 text-neutral-700">
+                <span className="text-[11px] font-mono px-1.5 py-0.2 rounded bg-neutral-200/80 text-neutral-700 font-bold">
                   {count}
                 </span>
                 {isUserGroup && (
-                  <span className="w-1.5 h-1.5 rounded-full bg-neutral-950"></span>
+                  <span className="w-2 h-2 rounded-full bg-neutral-950"></span>
                 )}
               </button>
             );

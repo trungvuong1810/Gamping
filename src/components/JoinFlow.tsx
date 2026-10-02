@@ -14,9 +14,9 @@ export const JoinFlow: React.FC<JoinFlowProps> = ({
   onJoinedTrip,
   onCancel
 }) => {
+  const [tripTitle, setTripTitle] = useState('');
   const [password, setPassword] = useState('');
   const [camperName, setCamperName] = useState(currentUser.name);
-  const [camperEmail, setCamperEmail] = useState(currentUser.email);
   const [errorMsg, setErrorMsg] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 
@@ -32,16 +32,16 @@ export const JoinFlow: React.FC<JoinFlowProps> = ({
 
     try {
       const res = await joinTrip({
+        tripTitle: tripTitle.trim(),
         password: password.trim(),
-        userEmail: camperEmail.trim().toLowerCase(),
+        userEmail: currentUser.email,
         userName: camperName.trim(),
         userId: currentUser.id
       });
 
       onJoinedTrip(res.trip);
     } catch (err: any) {
-      // SPEC REQUIREMENT: Exact failure copy: "Wrong password, please ask Host for the correct one"
-      setErrorMsg('Wrong password, please ask Host for the correct one');
+      setErrorMsg(err.message || 'Wrong trip name or password, please ask Host for the correct one');
     } finally {
       setIsLoading(false);
     }
@@ -68,7 +68,7 @@ export const JoinFlow: React.FC<JoinFlowProps> = ({
           Join a Camping Trip
         </h2>
         <p className="text-xs sm:text-sm text-neutral-500 mb-6 leading-relaxed">
-          Enter the password shared by your trip host. You will be bound to the event and placed into group planning.
+          Enter the Trip Name &amp; Password shared by your trip host in chat to join.
         </p>
 
         {errorMsg && (
@@ -85,6 +85,23 @@ export const JoinFlow: React.FC<JoinFlowProps> = ({
           
           <div>
             <label className="block text-xs font-semibold text-neutral-800 mb-1.5 uppercase tracking-wide">
+              Trip Name (Optional / Verification)
+            </label>
+            <input
+              type="text"
+              id="join-trip-title-input"
+              value={tripTitle}
+              onChange={(e) => {
+                setTripTitle(e.target.value);
+                if (errorMsg) setErrorMsg('');
+              }}
+              placeholder="e.g. Algonquin Fall Trip 2026"
+              className="w-full text-xs px-3.5 py-2.5 rounded-lg border border-neutral-200 focus:outline-none focus:border-neutral-950"
+            />
+          </div>
+
+          <div>
+            <label className="block text-xs font-semibold text-neutral-800 mb-1.5 uppercase tracking-wide">
               Trip Password
             </label>
             <input
@@ -98,9 +115,10 @@ export const JoinFlow: React.FC<JoinFlowProps> = ({
               placeholder="e.g. pine-cone-2026"
               className="w-full font-mono text-sm px-3.5 py-2.5 rounded-lg border border-neutral-200 focus:outline-none focus:border-neutral-950"
               autoFocus
+              required
             />
             <p className="text-[11px] text-neutral-400 mt-1">
-              Demo hint: try <code className="bg-neutral-100 px-1 py-0.5 rounded text-neutral-700">pine-cone-2026</code>
+              Ask your Trip Host if you need the trip password.
             </p>
           </div>
 
@@ -117,19 +135,6 @@ export const JoinFlow: React.FC<JoinFlowProps> = ({
             />
           </div>
 
-          <div>
-            <label className="block text-xs font-semibold text-neutral-800 mb-1.5 uppercase tracking-wide">
-              Your Email
-            </label>
-            <input
-              type="email"
-              value={camperEmail}
-              onChange={(e) => setCamperEmail(e.target.value)}
-              className="w-full text-xs px-3.5 py-2 rounded-lg border border-neutral-200 focus:outline-none focus:border-neutral-950"
-              required
-            />
-          </div>
-
           <div className="pt-2">
             <button
               type="submit"
@@ -137,7 +142,7 @@ export const JoinFlow: React.FC<JoinFlowProps> = ({
               id="join-submit-btn"
               className="w-full flex items-center justify-center gap-2 px-5 py-2.5 bg-neutral-950 text-white rounded-lg hover:bg-neutral-800 transition text-xs font-semibold"
             >
-              <span>{isLoading ? 'Verifying Password...' : 'Unlock Trip'}</span>
+              <span>{isLoading ? 'Verifying Password...' : 'Unlock & Join Trip'}</span>
               <ArrowRight className="w-4 h-4" />
             </button>
           </div>
@@ -145,7 +150,7 @@ export const JoinFlow: React.FC<JoinFlowProps> = ({
         </form>
 
         <div className="mt-6 pt-4 border-t border-neutral-100 text-[11px] text-neutral-400 text-center">
-          No account recovery theater at this gate. The host is the authority.
+          No email verification needed. The host holds the gate key.
         </div>
 
       </div>

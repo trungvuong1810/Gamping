@@ -228,6 +228,83 @@ export const REGIONAL_PARKS: Record<string, Record<string, ParkRecommendation[]>
         amenities: ["Flush comfort stations with hot showers", "Utility hookup loops", "Direct sandy beach access"],
         activities: ["Low-tide Skimboarding", "Lakeside Walking", "Sunset Photography", "Outdoor Grilling"],
         description: "Effortless drive-in camping with quick access to saltwater beaches, perfect for first-time multi-family and mixed camper groups."
+      },
+      {
+        name: "Tinkham Campground - Mt. Baker-Snoqualmie Forest",
+        location: "North Bend, WA",
+        driveDistance: "approx 50 min drive (44 miles) via I-90 E",
+        pricePerNight: "$26 - $32 / night",
+        experienceLevel: "Intermediate",
+        restrictions: ["USFS Pass or Northwest Forest Pass required", "Pack out all trash", "Store food in hard-sided vehicles"],
+        amenities: ["Vault toilets and hand-pump water", "Fire rings and heavy wooden picnic tables", "South Fork Snoqualmie River frontage"],
+        activities: ["Annette Lake Trail Hike", "River Wade Fishing", "Campfire Storytelling", "Cast Iron Skillet Dinners"],
+        description: "Secluded riverside forest sites enveloped by giant Douglas firs and western hemlocks along the South Fork Snoqualmie River."
+      },
+      {
+        name: "Denny Creek Campground",
+        location: "North Bend, WA",
+        driveDistance: "approx 55 min drive (48 miles) via I-90 E",
+        pricePerNight: "$26 - $34 / night",
+        experienceLevel: "Intermediate",
+        restrictions: ["No firewood collection from standing trees", "Keep dogs on 6ft leashes", "Quiet hours 10 PM - 6 AM"],
+        amenities: ["Potable water spigots", "Clean vault restrooms", "Direct trailhead access to Denny Creek Slide"],
+        activities: ["Denny Creek Natural Waterslide", "Keekwulee Falls Hike", "River Rock Scrambling", "Dutch Oven Stews"],
+        description: "Famous mountain stream campground known for natural bedrock water chutes and alpine trailheads right from camp."
+      },
+      {
+        name: "Lake Easton State Park Campground",
+        location: "Easton, WA",
+        driveDistance: "approx 1 hr 15 min drive (72 miles) via I-90 E",
+        pricePerNight: "$35 - $45 / night",
+        experienceLevel: "Beginner",
+        restrictions: ["Discover Pass required", "Campfires in grates only", "Speed limit 10 mph"],
+        amenities: ["Flush toilets with hot showers", "Boat launch & swimming beach", "Paved bike paths & playground"],
+        activities: ["Paddling & Kayaking", "Palouse to Cascades Trail Biking", "Lakeside Swimming", "Group BBQ Cookouts"],
+        description: "Sunny eastern slope mountain lake campsite with clear warm waters, expansive group picnic areas, and gentle biking trails."
+      },
+      {
+        name: "Kachess Campground - Mt. Baker-Snoqualmie Forest",
+        location: "Cle Elum, WA",
+        driveDistance: "approx 1 hr 20 min drive (76 miles) via I-90 E",
+        pricePerNight: "$28 - $36 / night",
+        experienceLevel: "Intermediate",
+        restrictions: ["Food lock required for wildlife safety", "No motorized craft in swim bays", "Quiet hours strictly observed"],
+        amenities: ["Potable water pumps", "Vault comfort stations", "Double and group campsite loops", "Boat ramp"],
+        activities: ["Motorboating & Water Skiing", "Little Kachess Trail Trek", "Paddleboarding", "Fireside Gathering"],
+        description: "Sprawling lakefront campground with clear blue waters surrounded by dense pine forest, offering large multi-tent group setups."
+      },
+      {
+        name: "Saltwater State Park Campground",
+        location: "Des Moines, WA",
+        driveDistance: "approx 30 min drive (20 miles) via I-5 S",
+        pricePerNight: "$32 - $40 / night",
+        experienceLevel: "Beginner",
+        restrictions: ["Discover Pass required", "Marine sanctuary - shell collection prohibited", "Strict 10 PM quiet hours"],
+        amenities: ["Flush restrooms & hot showers", "Covered kitchen shelters with stone fireplaces", "Puget Sound tidepool access"],
+        activities: ["Tidepooling & Marine Life Watching", "Beachcombing", "Sunset Grilling", "Forest Creek Nature Walks"],
+        description: "Nestled in a forested ravine that opens directly onto Puget Sound beach, featuring historic stone picnic shelters for group meals."
+      },
+      {
+        name: "Kanaskat-Palmer State Park Campground",
+        location: "Ravensdale, WA",
+        driveDistance: "approx 50 min drive (38 miles) via WA-18 E",
+        pricePerNight: "$32 - $38 / night",
+        experienceLevel: "Intermediate",
+        restrictions: ["High-volume river currents - life jackets mandatory", "Discover Pass required", "Quiet hours enforced"],
+        amenities: ["Flush toilets and hot showers", "Covered group shelters", "River viewing decks"],
+        activities: ["White Water Kayak Watching", "Green River Gorge Hiking", "Fishing for Steelhead", "Campfire Stews"],
+        description: "Scenic shoreline camping perched above the roaring Green River Gorge, renowned for lush mossy trails and river overlook platforms."
+      },
+      {
+        name: "Flaming Geyser State Park Camp Area",
+        location: "Auburn, WA",
+        driveDistance: "approx 45 min drive (34 miles) via WA-167 S",
+        pricePerNight: "$30 - $38 / night",
+        experienceLevel: "Beginner",
+        restrictions: ["Discover Pass required", "Do not touch methane gas seeps", "Pets must remain leashed"],
+        amenities: ["Modern restrooms", "RC airplane flying field", "Green River tubing access", "Picnic pavilions"],
+        activities: ["River Tubing & Floating", "RC Model Airplane Flying", "Nature Trail Walking", "Group Outdoor Lunches"],
+        description: "Fun riverfront park featuring unique geothermal gas vents, wide grassy meadows, and gentle river tubing stretches."
       }
     ],
     "3-4 hrs drive": [
@@ -515,7 +592,7 @@ export function getCuratedRegionalParks(
   coords?: { lat: number; lng: number }
 ): ParkRecommendation[] {
   const region = detectLocationRegion(locationStr, coords);
-  const regionData = REGIONAL_PARKS[region] || REGIONAL_PARKS["california"];
+  const regionData = REGIONAL_PARKS[region] || REGIONAL_PARKS["pacific-nw"];
 
   // Match drive distance bracket
   let bracket = "within 2 hrs";
@@ -526,11 +603,24 @@ export function getCuratedRegionalParks(
     bracket = "3-4 hrs drive"; // Will use longest tier
   }
 
-  const matches = regionData[bracket] || regionData["within 2 hrs"] || REGIONAL_PARKS["ontario"]["within 2 hrs"];
+  const primary = regionData[bracket] || [];
+  const secondary = regionData[bracket === "within 2 hrs" ? "3-4 hrs drive" : "within 2 hrs"] || [];
+  const fallback = REGIONAL_PARKS["pacific-nw"]["within 2 hrs"] || [];
+
+  const combined = [...primary, ...secondary, ...fallback];
+  const seen = new Set<string>();
+  const matches: ParkRecommendation[] = [];
+
+  for (const park of combined) {
+    if (!seen.has(park.name)) {
+      seen.add(park.name);
+      matches.push(park);
+    }
+  }
 
   // Dynamically tailor the distance label to the user's specific city
   const userCity = locationStr.trim() || "your location";
-  return matches.map((park) => {
+  return matches.slice(0, 10).map((park) => {
     let driveDistance = park.driveDistance;
     if (driveDistance.includes("from departure")) {
       driveDistance = driveDistance.replace("from departure", `from ${userCity}`);

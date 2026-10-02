@@ -187,7 +187,7 @@ export const LocationAutocompleteInput: React.FC<LocationAutocompleteInputProps>
           onKeyDown={handleKeyDown}
           placeholder={placeholder}
           autoComplete="off"
-          className={`w-full text-xs pl-9 pr-24 py-2.5 rounded-lg border border-neutral-200 bg-white text-neutral-900 focus:outline-none focus:border-neutral-900 font-medium transition ${className}`}
+          className={`w-full text-xs pl-9 pr-24 py-2.5 border border-black bg-white text-black focus:outline-none focus:ring-1 focus:ring-black font-medium transition ${className}`}
         />
 
         {/* Clear input button */}
@@ -200,7 +200,7 @@ export const LocationAutocompleteInput: React.FC<LocationAutocompleteInputProps>
               setSuggestions([]);
               setIsOpen(false);
             }}
-            className="absolute right-16 p-1 text-neutral-400 hover:text-neutral-700 transition"
+            className="absolute right-16 p-1 text-black/50 hover:text-black transition"
             title="Clear location"
           >
             <X className="w-3.5 h-3.5" />
@@ -213,33 +213,33 @@ export const LocationAutocompleteInput: React.FC<LocationAutocompleteInputProps>
           onClick={handleUseCurrentLocation}
           disabled={isLocating}
           title="Detect my current location via GPS"
-          className="absolute right-2 px-2 py-1 text-[11px] font-medium text-neutral-700 hover:text-neutral-950 bg-neutral-100 hover:bg-neutral-200 rounded flex items-center gap-1 transition"
+          className="absolute right-2 px-2 py-1 text-[11px] font-bold uppercase tracking-wider text-black bg-white border border-black hover:bg-neutral-100 flex items-center gap-1 transition cursor-pointer"
         >
           {isLocating ? (
-            <Loader2 className="w-3 h-3 animate-spin text-neutral-600" />
+            <Loader2 className="w-3 h-3 animate-spin text-black" />
           ) : (
-            <Navigation className="w-3 h-3 text-neutral-700" />
+            <Navigation className="w-3 h-3 text-black" />
           )}
-          <span>{isLocating ? 'Locating...' : 'My GPS'}</span>
+          <span>{isLocating ? 'Locating...' : 'GPS'}</span>
         </button>
       </div>
 
       {/* Geolocation status / error banner */}
       {geoNotice && (
-        <div className="mt-1 text-[11px] px-2 py-1 bg-neutral-100 text-neutral-700 rounded border border-neutral-200 flex items-center gap-1.5 animate-in fade-in">
+        <div className="mt-1 text-[11px] px-2 py-1 bg-white text-black border border-black flex items-center gap-1.5 animate-in fade-in">
           <span>{geoNotice}</span>
         </div>
       )}
 
       {/* Autocomplete Suggestion Dropdown */}
       {isOpen && suggestions.length > 0 && (
-        <div className="absolute z-50 left-0 right-0 mt-1 bg-white rounded-xl border border-neutral-200 shadow-xl overflow-hidden animate-in fade-in duration-150">
-          <div className="px-3 py-1.5 bg-neutral-50 border-b border-neutral-100 text-[10px] font-semibold tracking-wider text-neutral-500 uppercase flex items-center justify-between">
+        <div className="absolute z-50 left-0 right-0 mt-1 bg-white border-2 border-black shadow-lg overflow-hidden animate-in fade-in duration-150">
+          <div className="px-3 py-1.5 bg-white border-b border-black text-[10px] font-bold tracking-wider text-black uppercase flex items-center justify-between">
             <span>Google Maps Address Suggestions</span>
-            {isLoading && <Loader2 className="w-2.5 h-2.5 animate-spin text-neutral-400" />}
+            {isLoading && <Loader2 className="w-2.5 h-2.5 animate-spin text-black" />}
           </div>
 
-          <ul className="max-h-60 overflow-y-auto divide-y divide-neutral-100">
+          <ul className="max-h-60 overflow-y-auto divide-y divide-black/10">
             {suggestions.map((s, idx) => {
               const isSelected = idx === activeIdx;
               return (
@@ -248,33 +248,33 @@ export const LocationAutocompleteInput: React.FC<LocationAutocompleteInputProps>
                   onClick={() => handleSelect(s)}
                   onMouseEnter={() => setActiveIdx(idx)}
                   className={`px-3 py-2.5 cursor-pointer transition flex items-start gap-2.5 ${
-                    isSelected ? 'bg-neutral-100 text-neutral-950' : 'hover:bg-neutral-50 text-neutral-800'
+                    isSelected ? 'bg-neutral-100 text-black font-semibold' : 'hover:bg-neutral-50 text-black'
                   }`}
                 >
-                  <div className="mt-0.5 w-4 h-4 rounded-full bg-neutral-100 text-neutral-600 flex items-center justify-center shrink-0">
+                  <div className="mt-0.5 w-4 h-4 border border-black bg-white text-black flex items-center justify-center shrink-0">
                     <MapPin className="w-2.5 h-2.5" />
                   </div>
                   <div className="min-w-0 flex-1">
-                    <div className="text-xs font-semibold text-neutral-900 truncate">
+                    <div className="text-xs font-bold text-black uppercase truncate">
                       {s.mainText}
                     </div>
                     {s.secondaryText && (
-                      <div className="text-[11px] text-neutral-500 truncate">
+                      <div className="text-[11px] text-black/70 truncate">
                         {s.secondaryText}
                       </div>
                     )}
                   </div>
                   {inputValue.toLowerCase() === s.description.toLowerCase() && (
-                    <Check className="w-3.5 h-3.5 text-neutral-950 shrink-0 self-center" />
+                    <Check className="w-3.5 h-3.5 text-black shrink-0 self-center" />
                   )}
                 </li>
               );
             })}
           </ul>
 
-          <div className="px-3 py-1 bg-neutral-50/80 border-t border-neutral-100 text-[10px] text-neutral-400 flex items-center justify-between">
+          <div className="px-3 py-1 bg-white border-t border-black text-[10px] text-black/60 flex items-center justify-between font-mono">
             <span>Use ↑↓ keys to navigate, Enter to select</span>
-            <span className="font-mono text-[9px] tracking-tight">Google Maps Platform</span>
+            <span className="text-[9px] tracking-tight uppercase font-bold text-black">Google Maps Platform</span>
           </div>
         </div>
       )}

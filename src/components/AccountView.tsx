@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { User, Trip, Friend } from '../types';
-import { fetchFriends, addFriend, deleteFriend, registerAccount, loginAccountWithPassword, getAuthStatus, verifySupabaseTables, syncLocalToSupabase, fetchSupabaseSchema } from '../api/client';
-import { UserCheck, Lock, Calendar, MapPin, Users, Plus, Trash2, ArrowLeft, ShieldCheck, Mail, Tag, Check, Database, Key, Server, Sparkles, Eye, EyeOff, AlertCircle, ExternalLink, Copy, RefreshCw, CloudSun } from 'lucide-react';
+import { fetchFriends, addFriend, deleteFriend, loginOrRegisterWithPin, clearAllDatabaseData, getAuthStatus, verifySupabaseTables, syncLocalToSupabase, fetchSupabaseSchema } from '../api/client';
+import { UserCheck, Lock, Calendar, MapPin, Users, Plus, Trash2, ArrowLeft, ShieldCheck, Mail, Tag, Check, Database, Key, Server, Sparkles, Eye, EyeOff, AlertCircle, ExternalLink, Copy, RefreshCw, CloudSun, KeyRound, RotateCcw } from 'lucide-react';
 
 interface AccountViewProps {
   currentUser: User | null;
@@ -142,14 +142,19 @@ export const AccountView: React.FC<AccountViewProps> = ({
   }, [currentUser?.id, activeTab]);
 
 
-  const handleRegister = async (e: React.FormEvent) => {
+  // Name & 4-Digit PIN Auth
+  const [pinName, setPinName] = useState('');
+  const [pinCode, setPinCode] = useState('');
+  const [isClearingData, setIsClearingData] = useState(false);
+
+  const handlePinAuthSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!regUsername.trim() || !regEmail.trim() || !regPassword.trim()) {
-      setAuthErrorMsg('Please fill in all required fields.');
+    if (!pinName.trim()) {
+      setAuthErrorMsg('Please enter your Name.');
       return;
     }
-    if (regPassword.length < 6) {
-      setAuthErrorMsg('Password must be at least 6 characters.');
+    if (!/^\d{4}$/.test(pinCode.trim())) {
+      setAuthErrorMsg('Please enter a valid 4-digit PIN (e.g. 1234).');
       return;
     }
 
@@ -158,54 +163,42 @@ export const AccountView: React.FC<AccountViewProps> = ({
     setAuthSuccessMsg('');
 
     try {
-      const result = await registerAccount({
-        username: regUsername.trim(),
-        email: regEmail.trim(),
-        password: regPassword.trim(),
-        displayName: regDisplayName.trim() || regUsername.trim()
+      const result = await loginOrRegisterWithPin({
+        name: pinName.trim(),
+        pin: pinCode.trim()
       });
 
-      setAuthSuccessMsg(result.message || 'Account successfully created!');
+      setAuthSuccessMsg(result.message || 'Authenticated successfully!');
       if (onUserLoggedIn) {
         onUserLoggedIn(result.user);
       }
-      setRegUsername('');
-      setRegPassword('');
-      setRegEmail('');
-      setRegDisplayName('');
+      setPinCode('');
     } catch (err: any) {
-      setAuthErrorMsg(err.message || 'Failed to create account.');
+      setAuthErrorMsg(err.message || 'Failed to authenticate with Name & PIN.');
     } finally {
       setIsAuthLoading(false);
     }
   };
 
-  const handleLogin = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!regUsername.trim() || !regPassword.trim()) {
-      setAuthErrorMsg('Please enter your username/email and password.');
+  const handleClearAllData = async () => {
+    if (!window.confirm('⚠️ Are you sure you want to clear ALL trip data, users, and invitations from Supabase & memory to restart?')) {
       return;
     }
 
-    setIsAuthLoading(true);
+    setIsClearingData(true);
     setAuthErrorMsg('');
     setAuthSuccessMsg('');
 
     try {
-      const result = await loginAccountWithPassword({
-        usernameOrEmail: regUsername.trim(),
-        password: regPassword.trim()
-      });
-
-      setAuthSuccessMsg(result.message || 'Signed in successfully!');
-      if (onUserLoggedIn) {
-        onUserLoggedIn(result.user);
-      }
-      setRegPassword('');
+      const res = await clearAllDatabaseData();
+      setAuthSuccessMsg(res.message || 'Database restarted cleanly!');
+      setTimeout(() => {
+        window.location.reload();
+      }, 1000);
     } catch (err: any) {
-      setAuthErrorMsg(err.message || 'Failed to sign in.');
+      setAuthErrorMsg(err.message || 'Failed to clear database data.');
     } finally {
-      setIsAuthLoading(false);
+      setIsClearingData(false);
     }
   };
 
@@ -344,37 +337,27 @@ export const AccountView: React.FC<AccountViewProps> = ({
         </div>
       </div>
 
-      {/* ================= TAB 1: CREATE ACCOUNT & AUTH ================= */}
+      {/* ================= TAB 1: QUICK NAME & PIN AUTH ================= */}
       {activeTab === 'create-account' && (
         <div className="p-6 rounded-2xl border border-neutral-200 bg-white shadow-xs">
           <div className="flex items-center justify-between mb-4">
             <div>
               <h2 className="text-lg font-semibold text-neutral-950">
-                {authMode === 'register' ? 'Create New Account' : 'Sign In to Account'}
+                Sign In or Register with Name & PIN
               </h2>
               <p className="text-xs text-neutral-500">
-                {authMode === 'register'
-                  ? 'All account information, username, and credentials are saved to Supabase (app_users table).'
-                  : 'Enter your username or email and password to hydrate your trips and profile.'}
+                No passwords required. Just enter your Name and a 4-digit PIN to access your trips.
               </p>
             </div>
-
-            <div className="flex items-center gap-1 p-1 bg-neutral-100 rounded-lg text-xs font-medium">
-              <button
-                type="button"
-                onClick={() => { setAuthMode('register'); setAuthErrorMsg(''); setAuthSuccessMsg(''); }}
-                className={`px-3 py-1 rounded-md transition ${authMode === 'register' ? 'bg-white shadow-xs text-neutral-950' : 'text-neutral-500'}`}
-              >
-                Create Account
-              </button>
-              <button
-                type="button"
-                onClick={() => { setAuthMode('login'); setAuthErrorMsg(''); setAuthSuccessMsg(''); }}
-                className={`px-3 py-1 rounded-md transition ${authMode === 'login' ? 'bg-white shadow-xs text-neutral-950' : 'text-neutral-500'}`}
-              >
-                Sign In
-              </button>
-            </div>
+            <button
+              onClick={handleClearAllData}
+              disabled={isClearingData}
+              className="px-3 py-1.5 border border-red-200 bg-red-50 text-red-700 text-xs font-medium rounded-xl hover:bg-red-100 transition flex items-center gap-1.5"
+              title="Wipe all database records and restart fresh"
+            >
+              <RotateCcw className="w-3.5 h-3.5" />
+              <span>{isClearingData ? 'Clearing...' : 'Restart / Clear All Data'}</span>
+            </button>
           </div>
 
           {authSuccessMsg && (
@@ -391,153 +374,68 @@ export const AccountView: React.FC<AccountViewProps> = ({
             </div>
           )}
 
-          {authMode === 'register' ? (
-            <form onSubmit={handleRegister} className="space-y-4 max-w-lg">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-[11px] font-semibold text-neutral-700 mb-1 uppercase tracking-wide">
-                    Username *
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    placeholder="e.g. camper_alex"
-                    value={regUsername}
-                    onChange={(e) => setRegUsername(e.target.value)}
-                    className="w-full text-xs px-3 py-2 rounded-lg border border-neutral-300 focus:outline-none focus:border-neutral-950 font-mono"
-                  />
-                </div>
+          <form onSubmit={handlePinAuthSubmit} className="space-y-4 max-w-lg">
+            <div>
+              <label className="block text-[11px] font-semibold text-neutral-700 mb-1 uppercase tracking-wide">
+                Your Name *
+              </label>
+              <input
+                type="text"
+                required
+                placeholder="e.g. Alex Host or Sarah Camper"
+                value={pinName}
+                onChange={(e) => setPinName(e.target.value)}
+                className="w-full text-xs px-3.5 py-2.5 rounded-xl border border-neutral-300 focus:outline-none focus:border-neutral-950 font-medium"
+              />
+              <p className="text-[11px] text-neutral-400 mt-1">If your Name isn't registered yet, typing it here creates your new account.</p>
+            </div>
 
-                <div>
-                  <label className="block text-[11px] font-semibold text-neutral-700 mb-1 uppercase tracking-wide">
-                    Display Name
-                  </label>
-                  <input
-                    type="text"
-                    placeholder="e.g. Alex Rivers"
-                    value={regDisplayName}
-                    onChange={(e) => setRegDisplayName(e.target.value)}
-                    className="w-full text-xs px-3 py-2 rounded-lg border border-neutral-300 focus:outline-none focus:border-neutral-950"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-[11px] font-semibold text-neutral-700 mb-1 uppercase tracking-wide">
-                  Email Address *
-                </label>
+            <div>
+              <label className="block text-[11px] font-semibold text-neutral-700 mb-1 uppercase tracking-wide">
+                4-Digit PIN *
+              </label>
+              <div className="relative">
+                <KeyRound className="w-4 h-4 text-neutral-400 absolute left-3 top-3" />
                 <input
-                  type="email"
+                  type="password"
+                  inputMode="numeric"
+                  pattern="\d{4}"
+                  maxLength={4}
                   required
-                  placeholder="alex.camper@gmail.com"
-                  value={regEmail}
-                  onChange={(e) => setRegEmail(e.target.value)}
-                  className="w-full text-xs px-3 py-2 rounded-lg border border-neutral-300 focus:outline-none focus:border-neutral-950"
+                  placeholder="1234"
+                  value={pinCode}
+                  onChange={(e) => setPinCode(e.target.value.replace(/\D/g, '').slice(0, 4))}
+                  className="w-full text-xs pl-9 pr-3 py-2.5 rounded-xl border border-neutral-300 focus:outline-none focus:border-neutral-950 font-mono tracking-widest text-sm font-bold"
                 />
               </div>
+              <p className="text-[11px] text-neutral-400 mt-1">Four numbers used to log in and retrieve your trips.</p>
+            </div>
 
+            <div className="p-3 rounded-xl border border-neutral-100 bg-neutral-50/80 text-[11px] text-neutral-500 flex items-start gap-2">
+              <Database className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
               <div>
-                <label className="block text-[11px] font-semibold text-neutral-700 mb-1 uppercase tracking-wide">
-                  Password * (min 6 characters)
-                </label>
-                <div className="relative">
-                  <input
-                    type={showPassword ? 'text' : 'password'}
-                    required
-                    minLength={6}
-                    placeholder="••••••••"
-                    value={regPassword}
-                    onChange={(e) => setRegPassword(e.target.value)}
-                    className="w-full text-xs px-3 py-2 pr-9 rounded-lg border border-neutral-300 focus:outline-none focus:border-neutral-950 font-mono"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-2.5 top-2.5 text-neutral-400 hover:text-neutral-700"
-                  >
-                    {showPassword ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
-                  </button>
-                </div>
+                <strong>Supabase Persistence Active: </strong>
+                Your profile, Name, and 4-digit PIN are safely stored in Supabase PostgreSQL (<code>app_users</code> table).
               </div>
+            </div>
 
-              <div className="p-3 rounded-xl border border-neutral-100 bg-neutral-50/80 text-[11px] text-neutral-500 flex items-start gap-2">
-                <Database className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
-                <div>
-                  <strong>Supabase Persistence: </strong>
-                  Account record is saved to the PostgreSQL <code>app_users</code> table with hashed password security.
-                </div>
-              </div>
-
+            <div className="flex items-center gap-3">
               <button
                 type="submit"
                 disabled={isAuthLoading}
-                className="w-full sm:w-auto px-6 py-2.5 text-xs font-semibold bg-neutral-950 text-white rounded-lg hover:bg-neutral-800 transition flex items-center justify-center gap-2"
+                className="px-6 py-2.5 text-xs font-semibold bg-neutral-950 text-white rounded-xl hover:bg-neutral-800 transition flex items-center gap-2 shadow-xs"
               >
                 {isAuthLoading ? (
                   <>
                     <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                    <span>Saving to Supabase...</span>
+                    <span>Authenticating...</span>
                   </>
                 ) : (
-                  <span>Create Account & Sign In</span>
+                  <span>Sign In / Create with Name & PIN</span>
                 )}
               </button>
-            </form>
-          ) : (
-            <form onSubmit={handleLogin} className="space-y-4 max-w-lg">
-              <div>
-                <label className="block text-[11px] font-semibold text-neutral-700 mb-1 uppercase tracking-wide">
-                  Username or Email *
-                </label>
-                <input
-                  type="text"
-                  required
-                  placeholder="camper_alex or alex@example.com"
-                  value={regUsername}
-                  onChange={(e) => setRegUsername(e.target.value)}
-                  className="w-full text-xs px-3 py-2 rounded-lg border border-neutral-300 focus:outline-none focus:border-neutral-950 font-mono"
-                />
-              </div>
-
-              <div>
-                <label className="block text-[11px] font-semibold text-neutral-700 mb-1 uppercase tracking-wide">
-                  Password *
-                </label>
-                <div className="relative">
-                  <input
-                    type={showPassword ? 'text' : 'password'}
-                    required
-                    placeholder="••••••••"
-                    value={regPassword}
-                    onChange={(e) => setRegPassword(e.target.value)}
-                    className="w-full text-xs px-3 py-2 pr-9 rounded-lg border border-neutral-300 focus:outline-none focus:border-neutral-950 font-mono"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-2.5 top-2.5 text-neutral-400 hover:text-neutral-700"
-                  >
-                    {showPassword ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
-                  </button>
-                </div>
-              </div>
-
-              <button
-                type="submit"
-                disabled={isAuthLoading}
-                className="w-full sm:w-auto px-6 py-2.5 text-xs font-semibold bg-neutral-950 text-white rounded-lg hover:bg-neutral-800 transition flex items-center justify-center gap-2"
-              >
-                {isAuthLoading ? (
-                  <>
-                    <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                    <span>Verifying...</span>
-                  </>
-                ) : (
-                  <span>Sign In</span>
-                )}
-              </button>
-            </form>
-          )}
+            </div>
+          </form>
         </div>
       )}
 
@@ -550,7 +448,7 @@ export const AccountView: React.FC<AccountViewProps> = ({
                 People I Camp With ({friends.length})
               </h2>
               <p className="text-xs text-neutral-500">
-                Your reusable roster. When creating trips, check any frequent friend to invite without retyping emails.
+                Your reusable camping squad roster for tracking group members.
               </p>
             </div>
 
@@ -720,11 +618,11 @@ export const AccountView: React.FC<AccountViewProps> = ({
         <div className="p-6 rounded-2xl border border-neutral-200 bg-white shadow-xs space-y-6">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div className="flex items-center gap-2.5">
-              <div className="w-9 h-9 rounded-xl bg-[#3A3B3A] text-white flex items-center justify-center">
+              <div className="w-9 h-9 rounded-xl bg-black text-white flex items-center justify-center">
                 <Database className="w-5 h-5" />
               </div>
               <div>
-                <h2 className="text-xl font-medium text-[#3A3B3A]">
+                <h2 className="text-xl font-medium text-black">
                   Cloud Services & Database Health
                 </h2>
                 <p className="text-xs text-neutral-500">Live connection status for Supabase PostgreSQL, Resend email & Google Maps</p>
@@ -832,7 +730,7 @@ export const AccountView: React.FC<AccountViewProps> = ({
           <div className="p-5 rounded-xl border border-neutral-200 bg-neutral-50 space-y-4">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-neutral-200 pb-3">
               <div>
-                <h3 className="font-medium text-sm text-[#3A3B3A] flex items-center gap-2">
+                <h3 className="font-medium text-sm text-black flex items-center gap-2">
                   <Database className="w-4 h-4 text-emerald-600" />
                   <span>Supabase Database Table Status</span>
                 </h3>
@@ -919,7 +817,7 @@ export const AccountView: React.FC<AccountViewProps> = ({
                     </div>
                     <button
                       onClick={handleCopySchema}
-                      className="w-full py-1.5 px-2 bg-[#3A3B3A] text-white rounded text-xs font-medium hover:bg-neutral-800 transition flex items-center justify-center gap-1.5"
+                      className="w-full py-1.5 px-2 bg-black text-white rounded text-xs font-medium hover:bg-neutral-800 transition flex items-center justify-center gap-1.5"
                     >
                       {copiedSql ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
                       <span>{copiedSql ? 'Copied to Clipboard!' : 'Copy SQL Schema'}</span>
@@ -974,7 +872,7 @@ export const AccountView: React.FC<AccountViewProps> = ({
                 <button
                   onClick={handleSyncToSupabase}
                   disabled={isSyncing}
-                  className="px-4 py-2 bg-[#3A3B3A] text-white rounded-lg text-xs font-medium hover:bg-neutral-800 transition flex items-center gap-2 self-start sm:self-auto"
+                  className="px-4 py-2 bg-black text-white rounded-lg text-xs font-medium hover:bg-neutral-800 transition flex items-center gap-2 self-start sm:self-auto"
                 >
                   <RefreshCw className={`w-3.5 h-3.5 ${isSyncing ? 'animate-spin' : ''}`} />
                   <span>{isSyncing ? 'Synchronizing...' : 'Sync Local Data to Supabase'}</span>

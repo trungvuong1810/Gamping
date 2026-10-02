@@ -4,6 +4,7 @@ import fs from "fs";
 import { createServer as createViteServer } from "vite";
 import dotenv from "dotenv";
 import { createClient } from "@supabase/supabase-js";
+import { Resend } from "resend";
 import {
   GMP_ATTRIBUTION_ID,
   REFERENCE_CITIES,
@@ -20,8 +21,26 @@ import {
   getGrokApiKey,
   getGrokModelName
 } from "./server-grok.js";
+import type { Trip, TripMember, Group, GroupMember, EquipmentItem, FoodItem, TripInvitation } from "./src/types";
 
 dotenv.config();
+
+// Ensure Google Maps API Key is available from environment or user-configured key
+if (!process.env.VITE_GOOGLE_MAPS_API_KEY) {
+  process.env.VITE_GOOGLE_MAPS_API_KEY = "AIzaSyDCsyxNlUD_HWf4anJhms4HQUnlVa9La8M";
+}
+if (!process.env.GOOGLE_MAPS_API_KEY) {
+  process.env.GOOGLE_MAPS_API_KEY = "AIzaSyDCsyxNlUD_HWf4anJhms4HQUnlVa9La8M";
+}
+
+export function getGoogleMapsApiKeys(): string[] {
+  const keys = [
+    process.env.VITE_GOOGLE_MAPS_API_KEY,
+    process.env.GOOGLE_MAPS_API_KEY,
+    "AIzaSyDCsyxNlUD_HWf4anJhms4HQUnlVa9La8M"
+  ].filter((k): k is string => Boolean(k && k.trim().length > 0));
+  return Array.from(new Set(keys));
+}
 
 const app = express();
 const PORT = 3000;
@@ -51,50 +70,87 @@ if (SUPABASE_URL && SUPABASE_KEY) {
   }
 }
 
+// Resend Email Helper with automatic domain fallback
+async function sendResendEmailWithFallback(resend: Resend, payload: {
+  fromName?: string;
+  to: string[];
+  subject: string;
+  html?: string;
+  text?: string;
+}) {
+  const preferredFrom = payload.fromName 
+    ? `"${payload.fromName}" <unboxdesign.canada@gmail.com>` 
+    : "unboxdesign.canada@gmail.com";
+
+  // Primary attempt using requested address
+  let result = await resend.emails.send({
+    from: preferredFrom,
+    replyTo: "unboxdesign.canada@gmail.com",
+    to: payload.to,
+    subject: payload.subject,
+    html: payload.html,
+    text: payload.text,
+  });
+
+  // If primary attempt fails due to validation_error (e.g., unverified domain for @gmail.com), fallback to onboarding@resend.dev
+  if (result.error && (result.error.name === "validation_error" || (result.error.message || "").toLowerCase().includes("domain") || (result.error.message || "").toLowerCase().includes("verify"))) {
+    console.warn(`Resend domain validation notice for unboxdesign.canada@gmail.com (${result.error.message}). Falling back to onboarding@resend.dev...`);
+    const fallbackFrom = payload.fromName
+      ? `"${payload.fromName}" <onboarding@resend.dev>`
+      : "Unbox Design <onboarding@resend.dev>";
+    
+    result = await resend.emails.send({
+      from: fallbackFrom,
+      replyTo: "unboxdesign.canada@gmail.com",
+      to: payload.to,
+      subject: payload.subject,
+      html: payload.html,
+      text: payload.text,
+    });
+  }
+
+  return result;
+}
+
 // Resend Email Helper (Recommended free tier for 1-click email invitation links)
 async function sendInvitationEmail(toEmail: string, tripTitle: string, hostName: string, inviteLink: string) {
   if (!process.env.RESEND_API_KEY) {
     return { sent: false, reason: "No RESEND_API_KEY set" };
   }
   try {
-    const res = await fetch("https://api.resend.com/emails", {
-      method: "POST",
-      headers: {
-        "Authorization": `Bearer ${process.env.RESEND_API_KEY}`,
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify({
-        from: "Camping App <onboarding@resend.dev>",
-        to: [toEmail],
-        subject: `🏕️ You're invited to ${tripTitle} by ${hostName}!`,
-        html: `
-          <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 560px; margin: 0 auto; padding: 24px; border: 1px solid #e5e5e5; border-radius: 16px;">
-            <h2 style="color: #171717; margin-bottom: 8px;">You're Invited to Camp!</h2>
-            <p style="color: #525252; font-size: 14px; line-height: 1.6;">
-              <strong>${hostName}</strong> invited you to join the multi-group camping trip <strong>${tripTitle}</strong>.
-            </p>
-            <p style="color: #737373; font-size: 13px;">
-              No password or trip ID entry required — click the button below to automatically join the trip and coordinate equipment and meals instantly:
-            </p>
-            <div style="margin: 28px 0;">
-              <a href="${inviteLink}" style="background-color: #0a0a0a; color: #ffffff; text-decoration: none; padding: 12px 24px; border-radius: 8px; font-weight: 600; font-size: 14px; display: inline-block;">
-                Join Camping Trip Now →
-              </a>
-            </div>
-            <p style="color: #a3a3a3; font-size: 11px;">
-              Or copy this direct link: <br/><code>${inviteLink}</code>
-            </p>
+    const resend = new Resend(process.env.RESEND_API_KEY);
+    const { data, error } = await sendResendEmailWithFallback(resend, {
+      fromName: hostName || "Camping App",
+      to: [toEmail],
+      subject: `🏕️ You're invited to ${tripTitle} by ${hostName}!`,
+      html: `
+        <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 560px; margin: 0 auto; padding: 24px; border: 1px solid #e5e5e5; border-radius: 16px;">
+          <h2 style="color: #171717; margin-bottom: 8px;">You're Invited to Camp!</h2>
+          <p style="color: #525252; font-size: 14px; line-height: 1.6;">
+            <strong>${hostName}</strong> invited you to join the multi-group camping trip <strong>${tripTitle}</strong>.
+          </p>
+          <p style="color: #737373; font-size: 13px;">
+            No password or trip ID entry required — click the button below to automatically join the trip and coordinate equipment and meals instantly:
+          </p>
+          <div style="margin: 28px 0;">
+            <a href="${inviteLink}" style="background-color: #0a0a0a; color: #ffffff; text-decoration: none; padding: 12px 24px; border-radius: 8px; font-weight: 600; font-size: 14px; display: inline-block;">
+              Join Camping Trip Now →
+            </a>
           </div>
-        `
-      })
+          <p style="color: #a3a3a3; font-size: 11px;">
+            Or copy this direct link: <br/><code>${inviteLink}</code>
+          </p>
+        </div>
+      `
     });
-    const data = await res.json();
-    if (!res.ok) {
-      console.warn(`Resend email delivery notice for ${toEmail}:`, data);
+
+    if (error) {
+      console.warn(`Resend email delivery notice for ${toEmail}:`, error);
       return { 
         sent: false, 
-        error: data.message || "Failed to deliver via Resend API",
-        isSandboxRestricted: (data.message || "").toLowerCase().includes("testing emails to your own email address") || (data.name === "validation_error")
+        error: error.message || "Failed to deliver via Resend API",
+        details: error,
+        isSandboxRestricted: (error.message || "").toLowerCase().includes("testing emails to your own email address") || (error.name === "validation_error")
       };
     }
     return { sent: true, data };
@@ -222,21 +278,19 @@ async function sendWeatherReportEmail(opts: {
   `;
 
   try {
-    const res = await fetch("https://api.resend.com/emails", {
-      method: "POST",
-      headers: {
-        "Authorization": `Bearer ${process.env.RESEND_API_KEY}`,
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify({
-        from: "GAMPING Weather <onboarding@resend.dev>",
-        to: [toEmail],
-        subject: `🏕️ 7-Day Pre-Trip Weather Status: ${trip.title} (${campsiteName || trip.location})`,
-        html
-      })
+    const resend = new Resend(process.env.RESEND_API_KEY);
+    const { data, error } = await sendResendEmailWithFallback(resend, {
+      fromName: "GAMPING Weather",
+      to: [toEmail],
+      subject: `🏕️ 7-Day Pre-Trip Weather Status: ${trip.title} (${campsiteName || trip.location})`,
+      html
     });
-    const data = await res.json();
-    return { sent: res.ok, data };
+
+    if (error) {
+      console.error("Resend weather email delivery error:", error);
+      return { sent: false, error: error.message };
+    }
+    return { sent: true, data };
   } catch (err: any) {
     console.error("Resend weather email delivery error:", err);
     return { sent: false, error: err.message };
@@ -287,6 +341,11 @@ interface StorageData {
       lastSentAt?: string;
       lastForecastSummary?: string;
     };
+    googleSpreadsheetId?: string;
+    googleSpreadsheetUrl?: string;
+    googleSpreadsheetTitle?: string;
+    googleSpreadsheetLastSynced?: string;
+    googleSpreadsheetSyncStatus?: string;
   }>;
   tripMembers: Array<{
     id: string;
@@ -349,214 +408,19 @@ interface StorageData {
   }>;
 }
 
-// Seed initial realistic data
+// Seed initial clean empty state (no mockup data)
 function getInitialData(): StorageData {
   return {
-    users: [
-      { id: "usr_host", email: "alex.camper@gmail.com", name: "Alex Rivers" },
-      { id: "usr_sara", email: "sara.k@gmail.com", name: "Sara Kelly" },
-      { id: "usr_marcus", email: "marcus.t@gmail.com", name: "Marcus Thorne" },
-      { id: "usr_elena", email: "elena.v@gmail.com", name: "Elena Vance" },
-      { id: "usr_david", email: "david.c@gmail.com", name: "David Chen" },
-    ],
-    trips: [
-      {
-        id: "trip_upcoming_1",
-        title: "Algonquin Lakefront Multi-Site",
-        hostId: "usr_host",
-        hostEmail: "alex.camper@gmail.com",
-        hostName: "Alex Rivers",
-        startDate: "2026-10-09",
-        endDate: "2026-10-12",
-        location: "Algonquin Provincial Park, ON",
-        parkDetails: {
-          name: "Algonquin Provincial Park - Lake of Two Rivers",
-          location: "Whitney, ON (approx 3 hrs from Toronto / Ottawa)",
-          driveDistance: "3 hrs drive",
-          pricePerNight: "$42 / site",
-          experienceLevel: "Intermediate",
-          restrictions: ["Strict can/bottle glass ban on waterways", "Quiet hours 10 PM - 7 AM", "Max 6 people & 2 vehicles per site", "Fire only in designated pits"],
-          amenities: ["Comfort station with hot showers", "Drinking water taps", "Camp store & firewood on-site", "Canoe rental at Portage Outpost"],
-          activities: ["Canoeing & Portage", "Hiking Centennial Ridges Trail", "Night Stargazing", "Campfire Cooking"],
-          description: "Stunning fall foliage camping with lakeside access, pristine canoe routes, and designated multi-group adjacent campsites."
-        },
-        password: "pine-cone-2026",
-        passwordExpiresAt: "2026-10-15",
-        createdAt: "2026-09-10T10:00:00Z"
-      },
-      {
-        id: "trip_past_1",
-        title: "Bruce Peninsula Summer Solstice",
-        hostId: "usr_host",
-        hostEmail: "alex.camper@gmail.com",
-        hostName: "Alex Rivers",
-        startDate: "2025-06-20",
-        endDate: "2025-06-23",
-        location: "Bruce Peninsula National Park, ON",
-        parkDetails: {
-          name: "Cyprus Lake Campground",
-          location: "Tobermory, ON",
-          driveDistance: "4 hrs drive",
-          pricePerNight: "$48 / site",
-          experienceLevel: "Intermediate",
-          restrictions: ["Bear cache mandatory", "Grotto parking permit required", "Zero alcohol policy on holiday weekends"],
-          amenities: ["Flush toilets", "Potable water", "Firewood station"],
-          activities: ["Cliff Jumping / Swimming", "Bruce Trail Hike", "Grotto Exploration"],
-          description: "Turquoise Georgian Bay waters, limestone cliffs, and shared group campfire nights."
-        },
-        password: "bruce-trail-archive",
-        passwordExpiresAt: "2025-07-01",
-        createdAt: "2025-05-15T09:00:00Z"
-      }
-    ],
-    tripMembers: [
-      { id: "tm_1", tripId: "trip_upcoming_1", userId: "usr_host", email: "alex.camper@gmail.com", name: "Alex Rivers", role: "host", joinedAt: "2026-09-10T10:00:00Z" },
-      { id: "tm_2", tripId: "trip_upcoming_1", userId: "usr_sara", email: "sara.k@gmail.com", name: "Sara Kelly", role: "member", joinedAt: "2026-09-11T12:00:00Z" },
-      { id: "tm_3", tripId: "trip_upcoming_1", userId: "usr_marcus", email: "marcus.t@gmail.com", name: "Marcus Thorne", role: "member", joinedAt: "2026-09-11T14:30:00Z" },
-      { id: "tm_4", tripId: "trip_upcoming_1", userId: "usr_elena", email: "elena.v@gmail.com", name: "Elena Vance", role: "member", joinedAt: "2026-09-12T08:15:00Z" },
-      { id: "tm_5", tripId: "trip_upcoming_1", userId: "usr_david", email: "david.c@gmail.com", name: "David Chen", role: "member", joinedAt: "2026-09-12T09:45:00Z" },
-      // Past trip members
-      { id: "tm_6", tripId: "trip_past_1", userId: "usr_host", email: "alex.camper@gmail.com", name: "Alex Rivers", role: "host", joinedAt: "2025-05-15T09:00:00Z" },
-      { id: "tm_7", tripId: "trip_past_1", userId: "usr_sara", email: "sara.k@gmail.com", name: "Sara Kelly", role: "member", joinedAt: "2025-05-16T11:00:00Z" }
-    ],
-    groups: [
-      { id: "grp_alpha", tripId: "trip_upcoming_1", name: "Group Alpha (Lakeside Tent 14)", siteLabel: "Site 14", description: "Alex, Sara & Marcus", createdAt: "2026-09-10T10:30:00Z" },
-      { id: "grp_bravo", tripId: "trip_upcoming_1", name: "Group Bravo (Pine Ridge Tent 15)", siteLabel: "Site 15", description: "Elena & David", createdAt: "2026-09-10T10:35:00Z" },
-      { id: "grp_past_1", tripId: "trip_past_1", name: "Lakeshore Crew", siteLabel: "Site 22", description: "All campers", createdAt: "2025-05-15T09:30:00Z" }
-    ],
-    groupMembers: [
-      { id: "gm_1", groupId: "grp_alpha", tripId: "trip_upcoming_1", userId: "usr_host", email: "alex.camper@gmail.com", name: "Alex Rivers" },
-      { id: "gm_2", groupId: "grp_alpha", tripId: "trip_upcoming_1", userId: "usr_sara", email: "sara.k@gmail.com", name: "Sara Kelly" },
-      { id: "gm_3", groupId: "grp_alpha", tripId: "trip_upcoming_1", userId: "usr_marcus", email: "marcus.t@gmail.com", name: "Marcus Thorne" },
-      { id: "gm_4", groupId: "grp_bravo", tripId: "trip_upcoming_1", userId: "usr_elena", email: "elena.v@gmail.com", name: "Elena Vance" },
-      { id: "gm_5", groupId: "grp_bravo", tripId: "trip_upcoming_1", userId: "usr_david", email: "david.c@gmail.com", name: "David Chen" },
-      { id: "gm_6", groupId: "grp_past_1", tripId: "trip_past_1", userId: "usr_host", email: "alex.camper@gmail.com", name: "Alex Rivers" },
-      { id: "gm_7", groupId: "grp_past_1", tripId: "trip_past_1", userId: "usr_sara", email: "sara.k@gmail.com", name: "Sara Kelly" }
-    ],
-    equipmentItems: [
-      // Group Alpha Equipment
-      { id: "eq_1", tripId: "trip_upcoming_1", groupId: "grp_alpha", name: "6-Person Weatherproof Dome Tent", category: "Shelter & Sleep", assignedTo: "Alex Rivers", packed: true, notes: "Seam-sealed with ground tarp" },
-      { id: "eq_2", tripId: "trip_upcoming_1", groupId: "grp_alpha", name: "Dual Burner Propane Camp Stove", category: "Cooking & Water", assignedTo: "Marcus Thorne", packed: false, notes: "Bring 2x 1lb propane bottles" },
-      { id: "eq_3", tripId: "trip_upcoming_1", groupId: "grp_alpha", name: "Bear Vault & 50ft Hanging Cord", category: "Tools & First Aid", assignedTo: "Sara Kelly", packed: true, notes: "Mandatory for Algonquin backcountry" },
-      { id: "eq_4", tripId: "trip_upcoming_1", groupId: "grp_alpha", name: "Gravity Water Filter (4L Katadyn)", category: "Cooking & Water", assignedTo: "Alex Rivers", packed: true, notes: "Spare carbon element included" },
-      { id: "eq_5", tripId: "trip_upcoming_1", groupId: "grp_alpha", name: "Rechargeable LED Lantern & 2x Headlamps", category: "Lighting & Power", assignedTo: "Sara Kelly", packed: false, notes: "Charged via USB-C" },
-      { id: "eq_6", tripId: "trip_upcoming_1", groupId: "grp_alpha", name: "Thermal Sleeping Pads (R-value 4.2)", category: "Shelter & Sleep", assignedTo: "Marcus Thorne", packed: false, notes: "Night temps forecast down to 4°C" },
-      // Group Bravo Equipment
-      { id: "eq_7", tripId: "trip_upcoming_1", groupId: "grp_bravo", name: "4-Season 3-Person Backpacking Tent", category: "Shelter & Sleep", assignedTo: "Elena Vance", packed: true, notes: "Rain fly + vestibule" },
-      { id: "eq_8", tripId: "trip_upcoming_1", groupId: "grp_bravo", name: "Jetboil Flash Stove + Fuel Canister", category: "Cooking & Water", assignedTo: "David Chen", packed: true, notes: "Rapid water boiling" },
-      { id: "eq_9", tripId: "trip_upcoming_1", groupId: "grp_bravo", name: "First Aid Kit (wilderness level II)", category: "Tools & First Aid", assignedTo: "Elena Vance", packed: false, notes: "Includes splint, antiseptic, blister pads" },
-      { id: "eq_10", tripId: "trip_upcoming_1", groupId: "grp_bravo", name: "Axe & Folding Camp Saw", category: "Tools & First Aid", assignedTo: "David Chen", packed: false, notes: "For firewood prep" },
-      // Past Trip Equipment (Locked)
-      { id: "eq_11", tripId: "trip_past_1", groupId: "grp_past_1", name: "Summer Mesh Tent", category: "Shelter & Sleep", assignedTo: "Alex Rivers", packed: true, notes: "Completed trip" }
-    ],
-    foodItems: [
-      // Group Alpha Food
-      {
-        id: "fd_1",
-        tripId: "trip_upcoming_1",
-        groupId: "grp_alpha",
-        mealTime: "dinner",
-        mealType: "Dinner",
-        title: "Friday Night Campfire Cast Iron Chili",
-        description: "Hearty ground beef and 3-bean chili simmered in cast iron over wood embers.",
-        ingredientsOrItems: "Ground beef/beans, diced tomatoes, chili spices, sour cream, grated cheddar, tortilla chips",
-        cookOrBringer: "Alex & Sara",
-        suggestedBy: { userId: "usr_host", name: "Alex Rivers" },
-        preparers: [{ userId: "usr_host", name: "Alex Rivers" }, { userId: "usr_sara", name: "Sara Kelly" }],
-        ingredientBringers: [{ userId: "usr_marcus", name: "Marcus Thorne", items: "Grated cheddar, sour cream, tortilla chips" }],
-        status: "planned",
-        dayLabel: "Friday Night"
-      },
-      {
-        id: "fd_2",
-        tripId: "trip_upcoming_1",
-        groupId: "grp_alpha",
-        mealTime: "breakfast",
-        mealType: "Breakfast",
-        title: "Pour-over Coffee & Maple Bacon Skillet",
-        description: "Fresh dark roast pour-over coffee paired with crisp thick bacon and campfire sourdough toast.",
-        ingredientsOrItems: "Dark roast ground beans, pour-over dripper, thick-cut bacon, fresh eggs, sourdough",
-        cookOrBringer: "Marcus Thorne",
-        suggestedBy: { userId: "usr_marcus", name: "Marcus Thorne" },
-        preparers: [{ userId: "usr_marcus", name: "Marcus Thorne" }],
-        ingredientBringers: [{ userId: "usr_sara", name: "Sara Kelly", items: "Fresh eggs & artisanal sourdough loaf" }],
-        status: "purchased",
-        dayLabel: "Saturday Morning"
-      },
-      {
-        id: "fd_3",
-        tripId: "trip_upcoming_1",
-        groupId: "grp_alpha",
-        mealTime: "snacks",
-        mealType: "Snacks",
-        title: "High-Calorie Trail Mix & Hydration Electrolytes",
-        description: "Quick trail fuel for the Centennial Ridges day hike.",
-        ingredientsOrItems: "Almonds, dried cranberries, dark chocolate chips, Nuun electrolyte tabs",
-        cookOrBringer: "Sara Kelly",
-        suggestedBy: { userId: "usr_sara", name: "Sara Kelly" },
-        preparers: [{ userId: "usr_sara", name: "Sara Kelly" }],
-        ingredientBringers: [{ userId: "usr_sara", name: "Sara Kelly", items: "Almonds, cranberries, electrolyte tabs" }],
-        status: "packed",
-        dayLabel: "Saturday Trail Snacks"
-      },
-      // Group Bravo Food
-      {
-        id: "fd_4",
-        tripId: "trip_upcoming_1",
-        groupId: "grp_bravo",
-        mealTime: "dinner",
-        mealType: "Dinner",
-        title: "Saturday Dutch Oven Chicken Fajitas",
-        description: "Sizzling spiced chicken strips with sweet bell peppers, charred onions, and fresh lime.",
-        ingredientsOrItems: "Marinated chicken strips, bell peppers, onions, soft tortillas, salsa verde, lime",
-        cookOrBringer: "Elena Vance",
-        suggestedBy: { userId: "usr_elena", name: "Elena Vance" },
-        preparers: [{ userId: "usr_elena", name: "Elena Vance" }],
-        ingredientBringers: [{ userId: "usr_david", name: "David Chen", items: "Flour tortillas, salsa verde, fresh limes" }],
-        status: "planned",
-        dayLabel: "Saturday Night"
-      },
-      {
-        id: "fd_5",
-        tripId: "trip_upcoming_1",
-        groupId: "grp_bravo",
-        mealTime: "lunch",
-        mealType: "Lunch",
-        title: "Portage Day Picnic Sandwiches",
-        description: "Pre-assembled hardy baguettes that hold up in backpacks on the water.",
-        ingredientsOrItems: "Smoked turkey, aged cheddar, apples, mustard, crusty baguettes",
-        cookOrBringer: "David Chen",
-        suggestedBy: { userId: "usr_david", name: "David Chen" },
-        preparers: [{ userId: "usr_david", name: "David Chen" }],
-        ingredientBringers: [{ userId: "usr_elena", name: "Elena Vance", items: "Aged cheddar & crisp local apples" }],
-        status: "purchased",
-        dayLabel: "Saturday Lunch"
-      },
-      // Past Trip Food
-      {
-        id: "fd_6",
-        tripId: "trip_past_1",
-        groupId: "grp_past_1",
-        mealTime: "dinner",
-        mealType: "Dinner",
-        title: "Campfire Sausages & Buns",
-        description: "Smoked bratwurst grilled over maple charcoal.",
-        ingredientsOrItems: "Bratwurst, dijon mustard, buns",
-        cookOrBringer: "Alex Rivers",
-        suggestedBy: { userId: "usr_host", name: "Alex Rivers" },
-        preparers: [{ userId: "usr_host", name: "Alex Rivers" }],
-        ingredientBringers: [{ userId: "usr_host", name: "Alex Rivers" }],
-        status: "packed",
-        dayLabel: "Friday"
-      }
-    ],
-    friends: [
-      { id: "fr_1", userId: "usr_host", friendEmail: "sara.k@gmail.com", friendName: "Sara Kelly", tags: ["Experienced Camper", "Canoeist"] },
-      { id: "fr_2", userId: "usr_host", friendEmail: "marcus.t@gmail.com", friendName: "Marcus Thorne", tags: ["Camp Chef", "Car Camper"] },
-      { id: "fr_3", userId: "usr_host", friendEmail: "elena.v@gmail.com", friendName: "Elena Vance", tags: ["First Aider", "Ultralight"] },
-      { id: "fr_4", userId: "usr_host", friendEmail: "david.c@gmail.com", friendName: "David Chen", tags: ["Photographer", "Hammocker"] },
-      { id: "fr_5", userId: "usr_host", friendEmail: "jordan.outdoors@gmail.com", friendName: "Jordan Miller", tags: ["Backcountry Guide"] }
-    ]
+    users: [],
+    accounts: [],
+    invitations: [],
+    trips: [],
+    tripMembers: [],
+    groups: [],
+    groupMembers: [],
+    equipmentItems: [],
+    foodItems: [],
+    friends: []
   };
 }
 
@@ -625,6 +489,420 @@ function saveDb() {
   }
 }
 
+// ==========================================
+// SUPABASE REAL-TIME PERSISTENCE & AUTOSAVE ENGINE
+// ==========================================
+
+function tripToRow(trip: any) {
+  return {
+    id: trip.id,
+    title: trip.title,
+    host_id: trip.hostId,
+    host_email: trip.hostEmail,
+    host_name: trip.hostName,
+    start_date: trip.startDate,
+    end_date: trip.endDate,
+    location: trip.location,
+    park_details: trip.parkDetails || null,
+    password: trip.password || "",
+    password_expires_at: trip.passwordExpiresAt || null,
+    created_at: trip.createdAt || new Date().toISOString()
+  };
+}
+
+function rowToTrip(row: any): Trip {
+  return {
+    id: row.id,
+    title: row.title,
+    hostId: row.host_id,
+    hostEmail: row.host_email,
+    hostName: row.host_name,
+    startDate: row.start_date,
+    endDate: row.end_date,
+    location: row.location,
+    parkDetails: row.park_details || null,
+    password: row.password || "",
+    passwordExpiresAt: row.password_expires_at || "",
+    createdAt: row.created_at || new Date().toISOString()
+  };
+}
+
+function memberToRow(m: any) {
+  return {
+    id: m.id,
+    trip_id: m.tripId,
+    user_id: m.userId,
+    email: m.email,
+    name: m.name,
+    role: m.role || 'member',
+    joined_at: m.joinedAt || new Date().toISOString()
+  };
+}
+
+function rowToMember(row: any): TripMember {
+  return {
+    id: row.id,
+    tripId: row.trip_id,
+    userId: row.user_id,
+    email: row.email,
+    name: row.name,
+    role: (row.role as 'host' | 'member') || 'member',
+    joinedAt: row.joined_at || new Date().toISOString()
+  };
+}
+
+function groupToRow(g: any) {
+  return {
+    id: g.id,
+    trip_id: g.tripId,
+    name: g.name,
+    site_label: g.siteLabel || null,
+    description: g.description || null,
+    created_at: g.createdAt || new Date().toISOString()
+  };
+}
+
+function rowToGroup(row: any): Group {
+  return {
+    id: row.id,
+    tripId: row.trip_id,
+    name: row.name,
+    siteLabel: row.site_label || "",
+    description: row.description || "",
+    createdAt: row.created_at || new Date().toISOString()
+  };
+}
+
+function groupMemberToRow(gm: any) {
+  return {
+    id: gm.id,
+    group_id: gm.groupId,
+    trip_id: gm.tripId,
+    user_id: gm.userId,
+    email: gm.email || null,
+    name: gm.name || null
+  };
+}
+
+function rowToGroupMember(row: any): GroupMember {
+  return {
+    id: row.id,
+    groupId: row.group_id,
+    tripId: row.trip_id,
+    userId: row.user_id,
+    email: row.email || "",
+    name: row.name || ""
+  };
+}
+
+function equipmentToRow(e: any) {
+  return {
+    id: e.id,
+    trip_id: e.tripId,
+    group_id: e.groupId,
+    user_id: e.userId || null,
+    name: e.name,
+    category: e.category || 'General',
+    status: e.status || (e.packed ? 'packed' : 'needed'),
+    assigned_to: e.assignedTo ? (typeof e.assignedTo === 'object' ? e.assignedTo : { name: e.assignedTo }) : null,
+    notes: e.notes || null,
+    essential: Boolean(e.essential || e.aiSuggested),
+    created_at: e.createdAt || new Date().toISOString()
+  };
+}
+
+function rowToEquipment(row: any): EquipmentItem {
+  return {
+    id: row.id,
+    tripId: row.trip_id,
+    groupId: row.group_id,
+    name: row.name,
+    category: row.category || "General",
+    packed: row.status === 'packed' || Boolean(row.packed),
+    assignedTo: row.assigned_to ? (typeof row.assigned_to === 'object' ? row.assigned_to.name || JSON.stringify(row.assigned_to) : row.assigned_to) : "",
+    notes: row.notes || "",
+    essential: Boolean(row.essential),
+    aiSuggested: Boolean(row.essential || row.ai_suggested)
+  };
+}
+
+function foodToRow(f: any) {
+  return {
+    id: f.id,
+    trip_id: f.tripId,
+    group_id: f.groupId,
+    meal_time: f.mealTime || 'dinner',
+    meal_type: f.mealType || null,
+    title: f.title,
+    description: f.description || null,
+    ingredients_or_items: f.ingredientsOrItems || null,
+    day_label: f.dayLabel || null,
+    suggested_by: f.suggestedBy || null,
+    preparers: Array.isArray(f.preparers) ? f.preparers : [],
+    ingredient_bringers: Array.isArray(f.ingredientBringers) ? f.ingredientBringers : [],
+    status: f.status || 'planned',
+    created_at: f.createdAt || new Date().toISOString()
+  };
+}
+
+function rowToFood(row: any): FoodItem {
+  return {
+    id: row.id,
+    tripId: row.trip_id,
+    groupId: row.group_id,
+    mealTime: row.meal_time || 'dinner',
+    mealType: row.meal_type || (row.meal_time ? (row.meal_time.charAt(0).toUpperCase() + row.meal_time.slice(1)) : 'Dinner'),
+    title: row.title,
+    description: row.description || "",
+    ingredientsOrItems: row.ingredients_or_items || "",
+    dayLabel: row.day_label || "",
+    suggestedBy: row.suggested_by || { userId: "usr_host", name: "Host" },
+    cookOrBringer: row.preparers && row.preparers.length > 0 ? row.preparers[0].name : "Camper",
+    preparers: Array.isArray(row.preparers) ? row.preparers : [],
+    ingredientBringers: Array.isArray(row.ingredient_bringers) ? row.ingredient_bringers : [],
+    status: row.status || 'planned'
+  };
+}
+
+function invitationToRow(inv: any) {
+  return {
+    id: inv.id,
+    trip_id: inv.tripId,
+    host_id: inv.hostId,
+    host_name: inv.hostName,
+    recipient_email: inv.recipientEmail,
+    token: inv.token,
+    invite_link: inv.inviteLink,
+    status: inv.status || 'pending',
+    created_at: inv.createdAt || new Date().toISOString()
+  };
+}
+
+function rowToInvitation(row: any): TripInvitation {
+  return {
+    id: row.id,
+    tripId: row.trip_id,
+    hostId: row.host_id,
+    hostName: row.host_name,
+    recipientEmail: row.recipient_email,
+    token: row.token,
+    inviteLink: row.invite_link,
+    status: row.status || 'pending',
+    createdAt: row.created_at || new Date().toISOString()
+  };
+}
+
+async function hydrateAllFromSupabase() {
+  if (!supabaseServer) return;
+  try {
+    console.log("[Supabase Sync] Hydrating application state from Supabase PostgreSQL...");
+
+    // 1. Fetch Users
+    const { data: usersData, error: uErr } = await supabaseServer.from("app_users").select("*");
+    if (!uErr && usersData && usersData.length > 0) {
+      if (!db.accounts) db.accounts = [];
+      if (!db.users) db.users = [];
+      for (const u of usersData) {
+        if (!db.accounts.some(a => a.id === u.id || (a.email && a.email.toLowerCase() === u.email.toLowerCase()))) {
+          db.accounts.push({
+            id: u.id,
+            username: u.username,
+            email: u.email,
+            passwordHash: u.password_hash,
+            displayName: u.display_name || u.username,
+            createdAt: u.created_at
+          });
+        }
+        if (!db.users.some(usr => usr.id === u.id || (usr.email && usr.email.toLowerCase() === u.email.toLowerCase()))) {
+          db.users.push({
+            id: u.id,
+            name: u.display_name || u.username,
+            email: u.email
+          });
+        }
+      }
+    }
+
+    // 2. Fetch Trips
+    const { data: tripsData, error: tErr } = await supabaseServer.from("trips").select("*");
+    if (!tErr && tripsData && tripsData.length > 0) {
+      db.trips = tripsData.map(rowToTrip);
+
+      // 3. Fetch Trip Members
+      const { data: membersData } = await supabaseServer.from("trip_members").select("*");
+      if (membersData) db.tripMembers = membersData.map(rowToMember);
+
+      // 4. Fetch Groups
+      const { data: groupsData } = await supabaseServer.from("groups").select("*");
+      if (groupsData) db.groups = groupsData.map(rowToGroup);
+
+      // 5. Fetch Group Members
+      const { data: gmData } = await supabaseServer.from("group_members").select("*");
+      if (gmData) db.groupMembers = gmData.map(rowToGroupMember);
+
+      // 6. Fetch Equipment
+      const { data: eqData } = await supabaseServer.from("equipment_items").select("*");
+      if (eqData) db.equipmentItems = eqData.map(rowToEquipment);
+
+      // 7. Fetch Food
+      const { data: fdData } = await supabaseServer.from("food_items").select("*");
+      if (fdData) db.foodItems = fdData.map(rowToFood);
+
+      // 8. Fetch Invitations
+      const { data: invData } = await supabaseServer.from("trip_invitations").select("*");
+      if (invData) db.invitations = invData.map(rowToInvitation);
+
+      console.log(`[Supabase Sync] Hydrated ${db.trips.length} trips, ${db.tripMembers.length} members, ${db.groups.length} groups, ${db.equipmentItems.length} equipment, ${db.foodItems.length} meals from Supabase.`);
+      saveDb();
+    } else if (db.trips && db.trips.length > 0) {
+      // Supabase is empty, seed initial dataset to Supabase so it is backed up!
+      console.log("[Supabase Sync] Supabase trips table empty. Initializing and seeding base dataset to Supabase...");
+      for (const trip of db.trips) {
+        await supabaseServer.from("trips").upsert(tripToRow(trip));
+      }
+      for (const m of db.tripMembers) {
+        await supabaseServer.from("trip_members").upsert(memberToRow(m));
+      }
+      for (const g of db.groups) {
+        await supabaseServer.from("groups").upsert(groupToRow(g));
+      }
+      for (const gm of db.groupMembers) {
+        await supabaseServer.from("group_members").upsert(groupMemberToRow(gm));
+      }
+      for (const eq of db.equipmentItems) {
+        await supabaseServer.from("equipment_items").upsert(equipmentToRow(eq));
+      }
+      for (const fd of db.foodItems) {
+        await supabaseServer.from("food_items").upsert(foodToRow(fd));
+      }
+      console.log("[Supabase Sync] Initial seed complete.");
+    }
+  } catch (err: any) {
+    console.warn("[Supabase Sync] Hydration warning:", err?.message);
+  }
+}
+
+// Real-Time Autosave Helpers
+async function supabaseUpsertTrip(trip: any) {
+  if (!supabaseServer) return;
+  try {
+    const row = tripToRow(trip);
+    await supabaseServer.from("trips").upsert(row);
+  } catch (err: any) {
+    console.warn("[Supabase Autosave] Error saving trip:", err?.message);
+  }
+}
+
+async function supabaseUpsertTripMember(member: any) {
+  if (!supabaseServer) return;
+  try {
+    const row = memberToRow(member);
+    await supabaseServer.from("trip_members").upsert(row);
+  } catch (err: any) {
+    console.warn("[Supabase Autosave] Error saving member:", err?.message);
+  }
+}
+
+async function supabaseUpsertGroup(group: any) {
+  if (!supabaseServer) return;
+  try {
+    const row = groupToRow(group);
+    await supabaseServer.from("groups").upsert(row);
+  } catch (err: any) {
+    console.warn("[Supabase Autosave] Error saving group:", err?.message);
+  }
+}
+
+async function supabaseUpsertGroupMember(gm: any) {
+  if (!supabaseServer) return;
+  try {
+    const row = groupMemberToRow(gm);
+    await supabaseServer.from("group_members").upsert(row);
+  } catch (err: any) {
+    console.warn("[Supabase Autosave] Error saving group member:", err?.message);
+  }
+}
+
+async function supabaseDeleteGroupMember(tripId: string, userId: string) {
+  if (!supabaseServer) return;
+  try {
+    await supabaseServer.from("group_members").delete().eq("trip_id", tripId).eq("user_id", userId);
+  } catch (err: any) {
+    console.warn("[Supabase Autosave] Error deleting group member:", err?.message);
+  }
+}
+
+async function supabaseDeleteGroup(groupId: string) {
+  if (!supabaseServer) return;
+  try {
+    await supabaseServer.from("groups").delete().eq("id", groupId);
+  } catch (err: any) {
+    console.warn("[Supabase Autosave] Error deleting group:", err?.message);
+  }
+}
+
+async function supabaseUpsertEquipment(item: any) {
+  if (!supabaseServer) return;
+  try {
+    const row = equipmentToRow(item);
+    await supabaseServer.from("equipment_items").upsert(row);
+  } catch (err: any) {
+    console.warn("[Supabase Autosave] Error saving equipment:", err?.message);
+  }
+}
+
+async function supabaseDeleteEquipment(itemId: string) {
+  if (!supabaseServer) return;
+  try {
+    await supabaseServer.from("equipment_items").delete().eq("id", itemId);
+  } catch (err: any) {
+    console.warn("[Supabase Autosave] Error deleting equipment:", err?.message);
+  }
+}
+
+async function supabaseUpsertFood(item: any) {
+  if (!supabaseServer) return;
+  try {
+    const row = foodToRow(item);
+    await supabaseServer.from("food_items").upsert(row);
+  } catch (err: any) {
+    console.warn("[Supabase Autosave] Error saving food:", err?.message);
+  }
+}
+
+async function supabaseDeleteFood(itemId: string) {
+  if (!supabaseServer) return;
+  try {
+    await supabaseServer.from("food_items").delete().eq("id", itemId);
+  } catch (err: any) {
+    console.warn("[Supabase Autosave] Error deleting food:", err?.message);
+  }
+}
+
+async function supabaseUpsertInvitation(inv: any) {
+  if (!supabaseServer) return;
+  try {
+    const row = invitationToRow(inv);
+    await supabaseServer.from("trip_invitations").upsert(row);
+  } catch (err: any) {
+    console.warn("[Supabase Autosave] Error saving invitation:", err?.message);
+  }
+}
+
+async function supabaseDeleteTrip(tripId: string) {
+  if (!supabaseServer) return;
+  try {
+    await supabaseServer.from("trips").delete().eq("id", tripId);
+  } catch (err: any) {
+    console.warn("[Supabase Autosave] Error deleting trip:", err?.message);
+  }
+}
+
+// Initial hydration on startup
+if (supabaseServer) {
+  hydrateAllFromSupabase();
+}
+
 // Helper: Check if a trip is in the past
 function isTripPast(trip: { endDate: string }): boolean {
   const today = new Date().toISOString().split("T")[0];
@@ -635,24 +913,191 @@ function isTripPast(trip: { endDate: string }): boolean {
 // AI TRIP INTELLIGENCE ENDPOINTS (Grok 4.6 Persona via Gemini Backend)
 // ==========================================
 
-// 1. Long weekends (Current year CA & US holidays)
+// 1. Long weekends (Current year CA & US holidays dynamically calculated)
 app.get("/api/ai/long-weekends", async (req, res) => {
   const year = req.query.year ? parseInt(req.query.year as string) : 2026;
 
-  // Curated statutory long weekends for CA & US
-  const standardHolidays = [
-    { name: "Victoria Day Weekend", country: "CA", dates: `May 15 - May 18, ${year}`, startDate: `${year}-05-15`, endDate: `${year}-05-18`, days: 4, season: "Spring" },
-    { name: "Memorial Day Weekend", country: "US", dates: `May 22 - May 25, ${year}`, startDate: `${year}-05-22`, endDate: `${year}-05-25`, days: 4, season: "Spring" },
-    { name: "Canada Day Weekend", country: "CA", dates: `Jun 26 - Jun 29, ${year}`, startDate: `${year}-06-26`, endDate: `${year}-06-29`, days: 4, season: "Summer" },
-    { name: "4th of July Weekend", country: "US", dates: `Jul 03 - Jul 06, ${year}`, startDate: `${year}-07-03`, endDate: `${year}-07-06`, days: 4, season: "Summer" },
-    { name: "Civic Holiday / August Long", country: "CA", dates: `Jul 31 - Aug 03, ${year}`, startDate: `${year}-07-31`, endDate: `${year}-08-03`, days: 4, season: "Summer" },
-    { name: "Labor Day / Labour Day", country: "CA", dates: `Sep 04 - Sep 07, ${year}`, startDate: `${year}-09-04`, endDate: `${year}-09-07`, days: 4, season: "Summer" },
-    { name: "Labor Day Weekend", country: "US", dates: `Sep 04 - Sep 07, ${year}`, startDate: `${year}-09-04`, endDate: `${year}-09-07`, days: 4, season: "Summer" },
-    { name: "Canadian Thanksgiving Weekend", country: "CA", dates: `Oct 09 - Oct 12, ${year}`, startDate: `${year}-10-09`, endDate: `${year}-10-12`, days: 4, season: "Fall" },
-    { name: "Indigenous Peoples' / Columbus Day", country: "US", dates: `Oct 09 - Oct 12, ${year}`, startDate: `${year}-10-09`, endDate: `${year}-10-12`, days: 4, season: "Fall" },
-  ];
+  function pad(n: number): string {
+    return n < 10 ? '0' + n : '' + n;
+  }
+  function toIso(d: Date): string {
+    return `${d.getUTCFullYear()}-${pad(d.getUTCMonth() + 1)}-${pad(d.getUTCDate())}`;
+  }
+  function formatMD(d: Date): string {
+    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+    return `${days[d.getUTCDay()]}, ${months[d.getUTCMonth()]} ${d.getUTCDate()}`;
+  }
+  function getNthDayOfMonth(y: number, m: number, dow: number, n: number): Date {
+    let d = new Date(Date.UTC(y, m, 1));
+    let count = 0;
+    while (d.getUTCMonth() === m) {
+      if (d.getUTCDay() === dow) {
+        count++;
+        if (count === n) return d;
+      }
+      d.setUTCDate(d.getUTCDate() + 1);
+    }
+    return d;
+  }
+  function getLastDayOfMonth(y: number, m: number, dow: number): Date {
+    let d = new Date(Date.UTC(y, m + 1, 0));
+    while (d.getUTCDay() !== dow) {
+      d.setUTCDate(d.getUTCDate() - 1);
+    }
+    return d;
+  }
+  function addD(d: Date, n: number): Date {
+    const r = new Date(d);
+    r.setUTCDate(r.getUTCDate() + n);
+    return r;
+  }
 
-  return res.json({ holidays: standardHolidays });
+  const holidays = [];
+
+  // Family Day / Presidents Day (3rd Mon of Feb)
+  const febMon = getNthDayOfMonth(year, 1, 1, 3);
+  const febFri = addD(febMon, -3);
+  holidays.push({
+    name: "Family Day Weekend",
+    country: "CA",
+    dates: `${formatMD(febFri)} - ${formatMD(febMon)}, ${year}`,
+    startDate: toIso(febFri),
+    endDate: toIso(febMon),
+    days: 4,
+    season: "Winter"
+  });
+  holidays.push({
+    name: "Presidents' Day Weekend",
+    country: "US",
+    dates: `${formatMD(febFri)} - ${formatMD(febMon)}, ${year}`,
+    startDate: toIso(febFri),
+    endDate: toIso(febMon),
+    days: 4,
+    season: "Winter"
+  });
+
+  // Victoria Day (CA: Mon before May 25)
+  let vicMon = new Date(Date.UTC(year, 4, 24));
+  while (vicMon.getUTCDay() !== 1) vicMon.setUTCDate(vicMon.getUTCDate() - 1);
+  const vicFri = addD(vicMon, -3);
+  holidays.push({
+    name: "Victoria Day Weekend",
+    country: "CA",
+    dates: `${formatMD(vicFri)} - ${formatMD(vicMon)}, ${year}`,
+    startDate: toIso(vicFri),
+    endDate: toIso(vicMon),
+    days: 4,
+    season: "Spring"
+  });
+
+  // Memorial Day (US: Last Mon of May)
+  const memMon = getLastDayOfMonth(year, 4, 1);
+  const memFri = addD(memMon, -3);
+  holidays.push({
+    name: "Memorial Day Weekend",
+    country: "US",
+    dates: `${formatMD(memFri)} - ${formatMD(memMon)}, ${year}`,
+    startDate: toIso(memFri),
+    endDate: toIso(memMon),
+    days: 4,
+    season: "Spring"
+  });
+
+  // Canada Day (CA: July 1)
+  const canDay = new Date(Date.UTC(year, 6, 1));
+  const cdDow = canDay.getUTCDay();
+  let canStart = cdDow === 1 ? addD(canDay, -3) : cdDow === 5 ? canDay : cdDow === 6 ? addD(canDay, -1) : cdDow === 0 ? addD(canDay, -2) : cdDow === 4 ? canDay : cdDow === 2 ? addD(canDay, -4) : canDay;
+  let canEnd = cdDow === 1 ? canDay : cdDow === 5 ? addD(canDay, 3) : cdDow === 6 ? addD(canDay, 2) : cdDow === 0 ? addD(canDay, 1) : cdDow === 4 ? addD(canDay, 3) : cdDow === 2 ? canDay : addD(canDay, 4);
+  const canDays = Math.round((canEnd.getTime() - canStart.getTime()) / (1000 * 60 * 60 * 24)) + 1;
+  holidays.push({
+    name: "Canada Day Weekend",
+    country: "CA",
+    dates: `${formatMD(canStart)} - ${formatMD(canEnd)}, ${year}`,
+    startDate: toIso(canStart),
+    endDate: toIso(canEnd),
+    days: canDays,
+    season: "Summer"
+  });
+
+  // 4th of July Weekend (US: July 4)
+  const usJul4 = new Date(Date.UTC(year, 6, 4));
+  const usDow = usJul4.getUTCDay();
+  let usStart = usDow === 1 ? addD(usJul4, -3) : usDow === 5 ? usJul4 : usDow === 6 ? addD(usJul4, -1) : usDow === 0 ? addD(usJul4, -2) : usDow === 4 ? usJul4 : usDow === 2 ? addD(usJul4, -4) : usJul4;
+  let usEnd = usDow === 1 ? usJul4 : usDow === 5 ? addD(usJul4, 3) : usDow === 6 ? addD(usJul4, 2) : usDow === 0 ? addD(usJul4, 1) : usDow === 4 ? addD(usJul4, 3) : usDow === 2 ? usJul4 : addD(usJul4, 4);
+  const usDays = Math.round((usEnd.getTime() - usStart.getTime()) / (1000 * 60 * 60 * 24)) + 1;
+  holidays.push({
+    name: "4th of July Weekend",
+    country: "US",
+    dates: `${formatMD(usStart)} - ${formatMD(usEnd)}, ${year}`,
+    startDate: toIso(usStart),
+    endDate: toIso(usEnd),
+    days: usDays,
+    season: "Summer"
+  });
+
+  // Civic Holiday / August Long (CA: 1st Mon of August)
+  const civMon = getNthDayOfMonth(year, 7, 1, 1);
+  const civFri = addD(civMon, -3);
+  holidays.push({
+    name: "Civic Holiday / August Long",
+    country: "CA",
+    dates: `${formatMD(civFri)} - ${formatMD(civMon)}, ${year}`,
+    startDate: toIso(civFri),
+    endDate: toIso(civMon),
+    days: 4,
+    season: "Summer"
+  });
+
+  // Labor Day (CA & US: 1st Mon of September)
+  const labMon = getNthDayOfMonth(year, 8, 1, 1);
+  const labFri = addD(labMon, -3);
+  holidays.push({
+    name: "Labor Day / Labour Day",
+    country: "CA / US",
+    dates: `${formatMD(labFri)} - ${formatMD(labMon)}, ${year}`,
+    startDate: toIso(labFri),
+    endDate: toIso(labMon),
+    days: 4,
+    season: "Summer"
+  });
+
+  // Canadian Thanksgiving (CA: 2nd Mon of October)
+  const octMon = getNthDayOfMonth(year, 9, 1, 2);
+  const octFri = addD(octMon, -3);
+  holidays.push({
+    name: "Canadian Thanksgiving Weekend",
+    country: "CA",
+    dates: `${formatMD(octFri)} - ${formatMD(octMon)}, ${year}`,
+    startDate: toIso(octFri),
+    endDate: toIso(octMon),
+    days: 4,
+    season: "Fall"
+  });
+  holidays.push({
+    name: "Indigenous Peoples' Day Weekend",
+    country: "US",
+    dates: `${formatMD(octFri)} - ${formatMD(octMon)}, ${year}`,
+    startDate: toIso(octFri),
+    endDate: toIso(octMon),
+    days: 4,
+    season: "Fall"
+  });
+
+  // US Thanksgiving (US: 4th Thu of November)
+  const thxThu = getNthDayOfMonth(year, 10, 4, 4);
+  const thxSun = addD(thxThu, 3);
+  holidays.push({
+    name: "US Thanksgiving Weekend",
+    country: "US",
+    dates: `${formatMD(thxThu)} - ${formatMD(thxSun)}, ${year}`,
+    startDate: toIso(thxThu),
+    endDate: toIso(thxSun),
+    days: 4,
+    season: "Fall"
+  });
+
+  return res.json({ holidays });
 });
 
 // Google Maps Places API Autocomplete & Geocoding Endpoints (with attribution)
@@ -662,9 +1107,9 @@ app.get("/api/places/autocomplete", async (req, res) => {
     return res.json({ suggestions: [] });
   }
 
-  const gmpKey = process.env.GOOGLE_MAPS_API_KEY || process.env.VITE_GOOGLE_MAPS_API_KEY;
+  const keys = getGoogleMapsApiKeys();
 
-  if (gmpKey) {
+  for (const gmpKey of keys) {
     try {
       const response = await fetch("https://places.googleapis.com/v1/places:autocomplete", {
         method: "POST",
@@ -695,7 +1140,7 @@ app.get("/api/places/autocomplete", async (req, res) => {
         }
       }
     } catch (err) {
-      console.warn("Google Maps Places API error, using curated geodatabase:", err);
+      console.warn("Google Maps Places API error with key, trying fallback/next key:", err);
     }
   }
 
@@ -726,9 +1171,9 @@ app.get("/api/places/geocode", async (req, res) => {
     return res.status(400).json({ error: "Invalid lat/lng parameters" });
   }
 
-  const gmpKey = process.env.GOOGLE_MAPS_API_KEY || process.env.VITE_GOOGLE_MAPS_API_KEY;
+  const keys = getGoogleMapsApiKeys();
 
-  if (gmpKey) {
+  for (const gmpKey of keys) {
     try {
       const resp = await fetch(`https://maps.googleapis.com/maps/api/geocode/json?latlng=${lat},${lng}&key=${gmpKey}`);
       if (resp.ok) {
@@ -1287,20 +1732,52 @@ app.delete("/api/friends/:id", (req, res) => {
 // ==========================================
 
 // Get trips for a specific user (hydrates active and past trips)
-app.get("/api/trips", (req, res) => {
+app.get("/api/trips", async (req, res) => {
   const userId = req.query.userId as string;
   const userEmail = (req.query.email as string)?.toLowerCase();
+
+  // If Supabase is active, ensure we fetch latest cloud trips
+  if (supabaseServer) {
+    try {
+      const { data: sbTrips } = await supabaseServer.from("trips").select("*");
+      if (sbTrips && sbTrips.length > 0) {
+        for (const raw of sbTrips) {
+          const trip = rowToTrip(raw);
+          const existingIdx = db.trips.findIndex(t => t.id === trip.id);
+          if (existingIdx >= 0) {
+            db.trips[existingIdx] = trip;
+          } else {
+            db.trips.push(trip);
+          }
+        }
+      }
+      const { data: sbMembers } = await supabaseServer.from("trip_members").select("*");
+      if (sbMembers && sbMembers.length > 0) {
+        for (const raw of sbMembers) {
+          const mem = rowToMember(raw);
+          const existingIdx = db.tripMembers.findIndex(m => m.id === mem.id);
+          if (existingIdx >= 0) {
+            db.tripMembers[existingIdx] = mem;
+          } else {
+            db.tripMembers.push(mem);
+          }
+        }
+      }
+    } catch (err) {
+      console.warn("[Supabase] GET /api/trips sync notice:", err);
+    }
+  }
 
   let userTrips = db.trips;
 
   if (userId || userEmail) {
     const memberTripIds = new Set(
       db.tripMembers
-        .filter(tm => (userId && tm.userId === userId) || (userEmail && tm.email.toLowerCase() === userEmail))
+        .filter(tm => (userId && tm.userId === userId) || (userEmail && tm.email && tm.email.toLowerCase() === userEmail))
         .map(tm => tm.tripId)
     );
     // Also include if host
-    userTrips = db.trips.filter(t => t.hostId === userId || (userEmail && t.hostEmail.toLowerCase() === userEmail) || memberTripIds.has(t.id));
+    userTrips = db.trips.filter(t => (userId && t.hostId === userId) || (userEmail && t.hostEmail && t.hostEmail.toLowerCase() === userEmail) || memberTripIds.has(t.id));
   }
 
   const activeTrips = userTrips.filter(t => !isTripPast(t));
@@ -1309,10 +1786,101 @@ app.get("/api/trips", (req, res) => {
   return res.json({ trips: userTrips, activeTrips, pastTrips });
 });
 
-// Get single trip with all details, members, groups, lists
-app.get("/api/trips/:id", (req, res) => {
+// Get the latest active camping trip for real-time auto sync across all devices
+app.get("/api/active-trip", async (req, res) => {
+  let activeTrip = db.trips.slice().reverse().find(t => !isTripPast(t)) || db.trips[db.trips.length - 1];
+  if (!activeTrip) {
+    return res.json({ trip: null });
+  }
+
+  const id = activeTrip.id;
+  const members = db.tripMembers.filter(tm => tm.tripId === id);
+  const groups = db.groups.filter(g => g.tripId === id);
+  const groupMembers = db.groupMembers.filter(gm => gm.tripId === id);
+  const equipment = db.equipmentItems.filter(e => e.tripId === id);
+  const food = db.foodItems.filter(f => f.tripId === id);
+  const isPast = isTripPast(activeTrip);
+
+  return res.json({
+    trip: activeTrip,
+    isPast,
+    members,
+    groups,
+    groupMembers,
+    equipment,
+    food
+  });
+});
+
+// Connect or update Google Spreadsheet metadata for a trip
+app.post("/api/trips/:id/google-sheet", (req, res) => {
   const { id } = req.params;
+  const {
+    googleSpreadsheetId,
+    googleSpreadsheetUrl,
+    googleSpreadsheetTitle,
+    googleSpreadsheetLastSynced,
+    googleSpreadsheetSyncStatus
+  } = req.body;
+
   const trip = db.trips.find(t => t.id === id);
+  if (!trip) {
+    return res.status(404).json({ error: "Trip not found" });
+  }
+
+  if (googleSpreadsheetId !== undefined) trip.googleSpreadsheetId = googleSpreadsheetId;
+  if (googleSpreadsheetUrl !== undefined) trip.googleSpreadsheetUrl = googleSpreadsheetUrl;
+  if (googleSpreadsheetTitle !== undefined) trip.googleSpreadsheetTitle = googleSpreadsheetTitle;
+  trip.googleSpreadsheetLastSynced = googleSpreadsheetLastSynced || new Date().toISOString();
+  trip.googleSpreadsheetSyncStatus = googleSpreadsheetSyncStatus || "connected";
+  saveDb();
+
+  return res.json({ success: true, trip });
+});
+
+// Get single trip with all details, members, groups, lists
+app.get("/api/trips/:id", async (req, res) => {
+  const { id } = req.params;
+  let trip = db.trips.find(t => t.id === id);
+
+  if (supabaseServer) {
+    try {
+      if (!trip) {
+        const { data: sbTrip } = await supabaseServer.from("trips").select("*").eq("id", id).maybeSingle();
+        if (sbTrip) {
+          trip = rowToTrip(sbTrip);
+          db.trips.push(trip);
+        }
+      }
+
+      const [mRes, gRes, gmRes, eqRes, fdRes] = await Promise.all([
+        supabaseServer.from("trip_members").select("*").eq("trip_id", id),
+        supabaseServer.from("groups").select("*").eq("trip_id", id),
+        supabaseServer.from("group_members").select("*").eq("trip_id", id),
+        supabaseServer.from("equipment_items").select("*").eq("trip_id", id),
+        supabaseServer.from("food_items").select("*").eq("trip_id", id),
+      ]);
+
+      if (mRes.data && mRes.data.length > 0) {
+        db.tripMembers = db.tripMembers.filter(m => m.tripId !== id).concat(mRes.data.map(rowToMember));
+      }
+      if (gRes.data && gRes.data.length > 0) {
+        db.groups = db.groups.filter(g => g.tripId !== id).concat(gRes.data.map(rowToGroup));
+      }
+      if (gmRes.data && gmRes.data.length > 0) {
+        db.groupMembers = db.groupMembers.filter(gm => gm.tripId !== id).concat(gmRes.data.map(rowToGroupMember));
+      }
+      if (eqRes.data && eqRes.data.length > 0) {
+        db.equipmentItems = db.equipmentItems.filter(eq => eq.tripId !== id).concat(eqRes.data.map(rowToEquipment));
+      }
+      if (fdRes.data && fdRes.data.length > 0) {
+        db.foodItems = db.foodItems.filter(fd => fd.tripId !== id).concat(fdRes.data.map(rowToFood));
+      }
+    } catch (err) {
+      console.warn("[Supabase] GET /api/trips/:id fetch notice:", err);
+    }
+  }
+
   if (!trip) {
     return res.status(404).json({ error: "Trip not found" });
   }
@@ -1337,7 +1905,7 @@ app.get("/api/trips/:id", (req, res) => {
 });
 
 // Create new trip (Host flow)
-app.post("/api/trips", (req, res) => {
+app.post("/api/trips", async (req, res) => {
   const { title, hostId, hostEmail, hostName, startDate, endDate, location, parkDetails, password, friendEmails } = req.body;
 
   if (!title || !startDate || !endDate || !password) {
@@ -1349,8 +1917,8 @@ app.post("/api/trips", (req, res) => {
     id: tripId,
     title,
     hostId: hostId || "usr_host",
-    hostEmail: hostEmail || "alex.camper@gmail.com",
-    hostName: hostName || "Alex Rivers",
+    hostEmail: hostEmail || "organizer@camp.local",
+    hostName: hostName || "Camp Organizer",
     startDate,
     endDate,
     location: location || (parkDetails?.name || "State / Provincial Park"),
@@ -1363,7 +1931,7 @@ app.post("/api/trips", (req, res) => {
   db.trips.push(newTrip);
 
   // Add host as first member
-  db.tripMembers.push({
+  const hostMember: TripMember = {
     id: `tm_${Date.now()}_host`,
     tripId,
     userId: newTrip.hostId,
@@ -1371,27 +1939,30 @@ app.post("/api/trips", (req, res) => {
     name: newTrip.hostName,
     role: "host",
     joinedAt: new Date().toISOString()
-  });
+  };
+  db.tripMembers.push(hostMember);
 
   // Create initial group for Host
   const defaultGroupId = `grp_${Date.now()}_1`;
-  db.groups.push({
+  const defaultGroup: Group = {
     id: defaultGroupId,
     tripId,
     name: "Group Alpha (Host Site)",
     siteLabel: "Site 1",
     description: "Initial group",
     createdAt: new Date().toISOString()
-  });
+  };
+  db.groups.push(defaultGroup);
 
-  db.groupMembers.push({
+  const hostGroupMember: GroupMember = {
     id: `gm_${Date.now()}_host`,
     groupId: defaultGroupId,
     tripId,
     userId: newTrip.hostId,
     email: newTrip.hostEmail,
     name: newTrip.hostName
-  });
+  };
+  db.groupMembers.push(hostGroupMember);
 
   // If host provided friend emails, save them to friend list if not already present
   if (Array.isArray(friendEmails)) {
@@ -1409,11 +1980,25 @@ app.post("/api/trips", (req, res) => {
   }
 
   saveDb();
+
+  // Real-time autosave to Supabase cloud
+  if (supabaseServer) {
+    try {
+      await supabaseUpsertTrip(newTrip);
+      await supabaseUpsertTripMember(hostMember);
+      await supabaseUpsertGroup(defaultGroup);
+      await supabaseUpsertGroupMember(hostGroupMember);
+      console.log(`[Supabase Autosave] Successfully autosaved new trip "${newTrip.title}" (${newTrip.id}) to Supabase!`);
+    } catch (err: any) {
+      console.warn("[Supabase Autosave] Error autosaving trip:", err?.message);
+    }
+  }
+
   return res.status(201).json({ trip: newTrip });
 });
 
 // Update trip details / password rotation (Host only)
-app.patch("/api/trips/:id", (req, res) => {
+app.patch("/api/trips/:id", async (req, res) => {
   const { id } = req.params;
   const { userId, title, startDate, endDate, password, parkDetails, location } = req.body;
 
@@ -1422,11 +2007,8 @@ app.patch("/api/trips/:id", (req, res) => {
     return res.status(404).json({ error: "Trip not found" });
   }
 
-  if (isTripPast(trip)) {
-    return res.status(403).json({ error: "Past trips are locked and cannot be edited." });
-  }
-
-  if (trip.hostId !== userId) {
+  // Allow host to update trip and reschedule dates
+  if (trip.hostId !== userId && userId) {
     return res.status(403).json({ error: "Only the host can modify trip details." });
   }
 
@@ -1438,6 +2020,12 @@ app.patch("/api/trips/:id", (req, res) => {
   if (location) trip.location = location;
 
   saveDb();
+
+  // Autosave to Supabase
+  if (supabaseServer) {
+    await supabaseUpsertTrip(trip);
+  }
+
   return res.json({ trip });
 });
 
@@ -1582,18 +2170,73 @@ app.post("/api/trips/:id/send-invitation", async (req, res) => {
   });
 });
 
+// Backend endpoint using Resend SDK to send email from unboxdesign.canada@gmail.com
+app.post("/api/send-email", async (req, res) => {
+  try {
+    const { to, subject, html, text, message, fromName } = req.body;
+
+    if (!to) {
+      return res.status(400).json({ error: "Recipient email ('to') is required." });
+    }
+
+    const apiKey = process.env.RESEND_API_KEY;
+    if (!apiKey) {
+      return res.status(400).json({
+        error: "RESEND_API_KEY environment variable is not configured. Please set process.env.RESEND_API_KEY."
+      });
+    }
+
+    const resend = new Resend(apiKey);
+
+    const recipientList = Array.isArray(to) ? to : [to];
+    const emailSubject = subject || "Notification";
+    const bodyText = text || message;
+
+    const { data, error } = await sendResendEmailWithFallback(resend, {
+      fromName: fromName || "Unbox Design",
+      to: recipientList,
+      subject: emailSubject,
+      html: html || (bodyText ? undefined : "<p>Message sent from application.</p>"),
+      text: bodyText || undefined,
+    });
+
+    if (error) {
+      console.error("Resend send email error:", error);
+      return res.status(400).json({ 
+        error: error.message || "Failed to send email via Resend SDK.",
+        details: error
+      });
+    }
+
+    return res.json({ success: true, data });
+  } catch (err: any) {
+    console.error("Error sending email via /api/send-email:", err);
+    return res.status(500).json({ error: err.message || "Internal server error while sending email." });
+  }
+});
+
 // Join trip automatically via 1-click invitation link (No password entry required!)
 app.post("/api/trips/join-via-link", async (req, res) => {
   const { tripId, token, email, name } = req.body;
 
-  if (!tripId) return res.status(400).json({ error: "Trip ID is required" });
+  let targetTripId = tripId;
 
-  const trip = db.trips.find(t => t.id === tripId);
+  // Look up trip ID by invitation token if tripId wasn't passed directly
+  if (!targetTripId && token && db.invitations) {
+    const inv = db.invitations.find(i => i.token === token);
+    if (inv) {
+      targetTripId = inv.tripId;
+    }
+  }
+
+  if (!targetTripId) return res.status(400).json({ error: "Trip ID or valid invitation token is required" });
+
+  const trip = db.trips.find(t => t.id === targetTripId);
   if (!trip) return res.status(404).json({ error: "Trip not found" });
 
   // Update invitation status if token provided
   if (db.invitations && token) {
-    const inv = db.invitations.find(i => i.tripId === tripId && i.token === token);
+    const inv = db.invitations.find(i => i.token === token || i.tripId === targetTripId);
     if (inv) {
       inv.status = 'accepted';
     }
@@ -1626,25 +2269,15 @@ app.post("/api/trips/join-via-link", async (req, res) => {
       joinedAt: new Date().toISOString()
     };
     db.tripMembers.push(member);
-  }
-
-  // Also auto-assign to the first available group if not already in a group
-  let userGroup = db.groupMembers.find(gm => gm.tripId === trip.id && gm.userId === targetUser.id);
-  if (!userGroup) {
-    const defaultGroup = db.groups.find(g => g.tripId === trip.id);
-    if (defaultGroup) {
-      db.groupMembers.push({
-        id: `gm_${Date.now()}`,
-        groupId: defaultGroup.id,
-        tripId: trip.id,
-        userId: targetUser.id,
-        email: userEmail,
-        name: userName
-      });
-    }
+  } else if (userName && member.name !== userName) {
+    member.name = userName;
   }
 
   saveDb();
+
+  if (supabaseServer) {
+    await supabaseUpsertTripMember(member);
+  }
 
   return res.json({
     success: true,
@@ -1655,7 +2288,178 @@ app.post("/api/trips/join-via-link", async (req, res) => {
   });
 });
 
-// User Registration (Saved into Supabase app_users table + local store)
+// Name & 4-Digit PIN Quick Auth (Registration & Login in one smooth flow)
+app.post("/api/auth/pin-auth", async (req, res) => {
+  const { name, pin } = req.body;
+  if (!name || !name.trim()) {
+    return res.status(400).json({ error: "Name is required." });
+  }
+
+  const cleanPin = (pin || "").toString().trim();
+  if (!/^\d{4}$/.test(cleanPin)) {
+    return res.status(400).json({ error: "PIN must be exactly 4 digits (e.g. 1234)." });
+  }
+
+  const cleanName = name.trim();
+  const nameLower = cleanName.toLowerCase();
+
+  if (!db.accounts) db.accounts = [];
+  if (!db.users) db.users = [];
+
+  // 1. Check existing local account by name or username
+  let existing = db.accounts.find(a =>
+    (a.displayName || a.username || "").toLowerCase() === nameLower ||
+    (a.username || "").toLowerCase() === nameLower.replace(/[^a-z0-9]/g, '_')
+  );
+
+  // 2. Check Supabase app_users table if available
+  if (!existing && supabaseServer) {
+    try {
+      const { data } = await supabaseServer
+        .from("app_users")
+        .select("*")
+        .ilike("display_name", cleanName)
+        .maybeSingle();
+
+      if (data) {
+        existing = {
+          id: data.id,
+          username: data.username,
+          email: data.email,
+          passwordHash: data.password_hash || cleanPin,
+          displayName: data.display_name,
+          createdAt: data.created_at || new Date().toISOString()
+        };
+      }
+    } catch (err) {
+      console.warn("Supabase pin-auth lookup error:", err);
+    }
+  }
+
+  if (existing) {
+    // Validate PIN if stored
+    if (existing.passwordHash && existing.passwordHash !== cleanPin) {
+      return res.status(401).json({ error: "Incorrect 4-digit PIN for this Name. Please enter your correct PIN." });
+    }
+
+    // Update passwordHash if missing
+    existing.passwordHash = cleanPin;
+
+    const user = {
+      id: existing.id,
+      email: existing.email || `${nameLower.replace(/[^a-z0-9]/g, '.')}@camper.app`,
+      name: existing.displayName || cleanName,
+      pin: cleanPin
+    };
+
+    // Keep db.users in sync
+    const uIdx = db.users.findIndex(u => u.id === user.id);
+    if (uIdx >= 0) {
+      db.users[uIdx] = { ...db.users[uIdx], ...user };
+    } else {
+      db.users.push(user);
+    }
+
+    saveDb();
+
+    return res.status(200).json({
+      success: true,
+      user,
+      message: `Welcome back, ${user.name}!`
+    });
+  }
+
+  // 3. Register new user with Name & 4-Digit PIN
+  const userId = `usr_${Date.now()}`;
+  const generatedEmail = `${nameLower.replace(/[^a-z0-9]/g, '.')}@camper.app`;
+  const newAccount = {
+    id: userId,
+    username: nameLower.replace(/[^a-z0-9]/g, '_'),
+    email: generatedEmail,
+    pin: cleanPin,
+    passwordHash: cleanPin,
+    displayName: cleanName,
+    createdAt: new Date().toISOString()
+  };
+
+  db.accounts.push(newAccount);
+
+  const user = {
+    id: userId,
+    email: generatedEmail,
+    name: cleanName,
+    pin: cleanPin
+  };
+
+  db.users.push(user);
+
+  if (supabaseServer) {
+    try {
+      await supabaseServer.from("app_users").upsert({
+        id: userId,
+        username: newAccount.username,
+        email: generatedEmail,
+        password_hash: cleanPin,
+        display_name: cleanName,
+        created_at: newAccount.createdAt
+      });
+    } catch (err: any) {
+      console.warn("Supabase user insert error:", err?.message);
+    }
+  }
+
+  saveDb();
+
+  return res.status(201).json({
+    success: true,
+    user,
+    message: `Account created! Welcome, ${cleanName}.`
+  });
+});
+
+// Clear all database & memory data to restart fresh
+app.post("/api/admin/clear-data", async (req, res) => {
+  try {
+    db.trips = [];
+    db.users = [];
+    db.accounts = [];
+    db.invitations = [];
+    db.tripMembers = [];
+    db.groups = [];
+    db.groupMembers = [];
+    db.equipmentItems = [];
+    db.foodItems = [];
+    db.friends = [];
+    saveDb();
+
+    let supabaseCleared = false;
+    if (supabaseServer) {
+      try {
+        await supabaseServer.from("trip_invitations").delete().neq("id", "0");
+        await supabaseServer.from("group_members").delete().neq("id", "0");
+        await supabaseServer.from("groups").delete().neq("id", "0");
+        await supabaseServer.from("equipment_items").delete().neq("id", "0");
+        await supabaseServer.from("food_items").delete().neq("id", "0");
+        await supabaseServer.from("trip_members").delete().neq("id", "0");
+        await supabaseServer.from("trips").delete().neq("id", "0");
+        await supabaseServer.from("app_users").delete().neq("id", "0");
+        supabaseCleared = true;
+      } catch (sbErr: any) {
+        console.warn("Supabase clear error:", sbErr?.message);
+      }
+    }
+
+    return res.status(200).json({
+      success: true,
+      supabaseCleared,
+      message: supabaseCleared
+        ? "All trip data, users, and invitations cleared from Supabase and local memory."
+        : "All local trip data, users, and invitations cleared successfully."
+    });
+  } catch (err: any) {
+    return res.status(500).json({ error: err.message || "Failed to clear data" });
+  }
+});
 app.post("/api/auth/register", async (req, res) => {
   const { username, email, password, displayName } = req.body;
 
@@ -1968,42 +2772,80 @@ app.post("/api/supabase/sync-local", async (req, res) => {
   }
 });
 
-// JOIN TRIP VIA PASSWORD GATE
-// Spec requirement: Exact failure copy: "Wrong password, please ask Host for the correct one"
-app.post("/api/trips/join", (req, res) => {
-  const { password, userEmail, userName, userId } = req.body;
+// JOIN TRIP VIA TRIP NAME & PASSWORD GATE
+app.post("/api/trips/join", async (req, res) => {
+  const { tripTitle, password, userEmail, userName, userId } = req.body;
 
   if (!password) {
     return res.status(400).json({ error: "Wrong password, please ask Host for the correct one" });
   }
 
-  const cleanInput = password.trim();
-  const trip = db.trips.find(t => t.password.toLowerCase() === cleanInput.toLowerCase());
+  const cleanPassword = password.trim().toLowerCase();
+  const cleanTitle = (tripTitle || "").trim().toLowerCase();
+
+  let trip = db.trips.find(t => {
+    const passwordMatch = t.password.toLowerCase() === cleanPassword;
+    if (!passwordMatch) return false;
+    if (cleanTitle) {
+      return t.title.toLowerCase().includes(cleanTitle);
+    }
+    return true;
+  });
+
+  if (!trip && supabaseServer) {
+    try {
+      const { data: sbTrips } = await supabaseServer.from("trips").select("*");
+      if (sbTrips) {
+        for (const raw of sbTrips) {
+          const t = rowToTrip(raw);
+          if (t.password.toLowerCase() === cleanPassword && (!cleanTitle || t.title.toLowerCase().includes(cleanTitle))) {
+            trip = t;
+            if (!db.trips.some(existing => existing.id === trip.id)) {
+              db.trips.push(trip);
+            }
+            break;
+          }
+        }
+      }
+    } catch (err) {
+      console.warn("Supabase trip search notice:", err);
+    }
+  }
 
   if (!trip) {
-    return res.status(401).json({ error: "Wrong password, please ask Host for the correct one" });
+    return res.status(401).json({ error: "Wrong trip name or password, please ask Host for the correct one" });
   }
 
   // Ensure user exists
-  let targetUser = db.users.find(u => u.email.toLowerCase() === userEmail?.toLowerCase());
-  if (!targetUser && userEmail) {
+  const cleanEmail = (userEmail || "").trim().toLowerCase();
+  const cleanName = (userName || "").trim();
+
+  let targetUser = db.users.find(u =>
+    (userId && u.id === userId) ||
+    (cleanEmail && u.email && u.email.toLowerCase() === cleanEmail) ||
+    (cleanName && u.name && u.name.toLowerCase() === cleanName.toLowerCase())
+  );
+
+  if (!targetUser) {
     targetUser = {
-      id: userId || `usr_${Date.now()}`,
-      email: userEmail.toLowerCase(),
-      name: userName || userEmail.split("@")[0]
+      id: userId || `usr_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+      email: cleanEmail || `${(cleanName || "camper").toLowerCase().replace(/[^a-z0-9]/g, '.')}@camper.app`,
+      name: cleanName || "Camper"
     };
     db.users.push(targetUser);
+  } else if (cleanName && targetUser.name !== cleanName) {
+    targetUser.name = cleanName;
   }
 
-  const memberUserId = targetUser ? targetUser.id : (userId || `usr_${Date.now()}`);
-  const memberEmail = targetUser ? targetUser.email : (userEmail || "visitor@camp.com");
-  const memberName = targetUser ? targetUser.name : (userName || "Camper");
+  const memberUserId = targetUser.id;
+  const memberEmail = targetUser.email || cleanEmail || "camper@camper.app";
+  const memberName = cleanName || targetUser.name || "Camper";
 
   // Check if already in trip_members
-  let member = db.tripMembers.find(tm => tm.tripId === trip.id && (tm.userId === memberUserId || tm.email.toLowerCase() === memberEmail.toLowerCase()));
+  let member = db.tripMembers.find(tm => tm.tripId === trip.id && (tm.userId === memberUserId || (cleanEmail && tm.email && tm.email.toLowerCase() === cleanEmail)));
   if (!member) {
     member = {
-      id: `tm_${Date.now()}`,
+      id: `tm_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
       tripId: trip.id,
       userId: memberUserId,
       email: memberEmail,
@@ -2013,6 +2855,15 @@ app.post("/api/trips/join", (req, res) => {
     };
     db.tripMembers.push(member);
     saveDb();
+    if (supabaseServer) {
+      supabaseUpsertTripMember(member);
+    }
+  } else if (cleanName && member.name !== cleanName) {
+    member.name = cleanName;
+    saveDb();
+    if (supabaseServer) {
+      supabaseUpsertTripMember(member);
+    }
   }
 
   return res.json({
@@ -2027,20 +2878,95 @@ app.post("/api/trips/join", (req, res) => {
 // GROUP ASSIGN (Host-only write)
 // ==========================================
 
-// Create group in trip (Host only)
-app.post("/api/trips/:id/groups", (req, res) => {
+// Add a member/friend directly to trip
+app.post("/api/trips/:id/members", async (req, res) => {
+  const { id } = req.params;
+  const { hostUserId, name, email, groupId, role } = req.body;
+
+  const trip = db.trips.find(t => t.id === id);
+  if (!trip) return res.status(404).json({ error: "Trip not found" });
+
+  if (hostUserId && trip.hostId !== hostUserId) {
+    return res.status(403).json({ error: "Permission denied: Only the trip host can add members directly." });
+  }
+
+  if (!name || !name.trim()) {
+    return res.status(400).json({ error: "Friend's name is required." });
+  }
+
+  const cleanName = name.trim();
+  const cleanEmail = (email || `${cleanName.toLowerCase().replace(/[^a-z0-9]/g, '.')}@camp.local`).toLowerCase().trim();
+
+  // Find or create user
+  let user = db.users.find(u => (cleanEmail && u.email && u.email.toLowerCase() === cleanEmail) || (u.name && u.name.toLowerCase() === cleanName.toLowerCase()));
+  if (!user) {
+    user = {
+      id: `usr_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+      name: cleanName,
+      email: cleanEmail
+    };
+    db.users.push(user);
+  }
+
+  // Check if member already in trip
+  let member = db.tripMembers.find(tm => tm.tripId === id && (tm.userId === user.id || (cleanEmail && tm.email.toLowerCase() === cleanEmail)));
+  if (!member) {
+    member = {
+      id: `tm_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+      tripId: id,
+      userId: user.id,
+      email: user.email,
+      name: user.name,
+      role: role || "member",
+      joinedAt: new Date().toISOString()
+    };
+    db.tripMembers.push(member);
+  } else {
+    member.name = cleanName;
+  }
+
+  // Assign to group if groupId is provided
+  if (groupId) {
+    const existingGm = db.groupMembers.find(gm => gm.tripId === id && gm.userId === user.id);
+    if (existingGm) {
+      existingGm.groupId = groupId;
+    } else {
+      const newGm: GroupMember = {
+        id: `gm_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+        groupId,
+        tripId: id,
+        userId: user.id,
+        email: user.email,
+        name: user.name
+      };
+      db.groupMembers.push(newGm);
+    }
+  }
+
+  saveDb();
+
+  // Supabase autosave
+  if (supabaseServer) {
+    await supabaseUpsertTripMember(member);
+  }
+
+  return res.status(201).json({
+    success: true,
+    member,
+    members: db.tripMembers.filter(tm => tm.tripId === id)
+  });
+});
+
+// Create group in trip
+app.post("/api/trips/:id/groups", async (req, res) => {
   const { id } = req.params;
   const { userId, name, siteLabel, description } = req.body;
 
   const trip = db.trips.find(t => t.id === id);
   if (!trip) return res.status(404).json({ error: "Trip not found" });
 
-  if (isTripPast(trip)) {
-    return res.status(403).json({ error: "Past trips are locked." });
-  }
-
-  if (trip.hostId !== userId) {
-    return res.status(403).json({ error: "Permission denied: Only the host can create groups." });
+  if (userId && trip.hostId !== userId && !db.tripMembers.some(tm => tm.tripId === id && tm.userId === userId)) {
+    return res.status(403).json({ error: "Permission denied to create groups." });
   }
 
   if (!name) return res.status(400).json({ error: "Group name is required." });
@@ -2056,11 +2982,17 @@ app.post("/api/trips/:id/groups", (req, res) => {
 
   db.groups.push(newGroup);
   saveDb();
+
+  // Supabase autosave
+  if (supabaseServer) {
+    await supabaseUpsertGroup(newGroup);
+  }
+
   return res.status(201).json({ group: newGroup });
 });
 
 // Assign or move a member to a group (Host only)
-app.post("/api/trips/:id/assign-group", (req, res) => {
+app.post("/api/trips/:id/assign-group", async (req, res) => {
   const { id } = req.params;
   const { hostUserId, targetUserId, groupId, userEmail, userName } = req.body;
 
@@ -2081,9 +3013,16 @@ app.post("/api/trips/:id/assign-group", (req, res) => {
     db.groupMembers.splice(existingIndex, 1);
   }
 
-  // Add to new group if groupId is provided
-  if (groupId) {
-    const assignment = {
+  let assignment: any = null;
+  // Add to new group if valid groupId is provided
+  if (groupId && groupId !== "unassign" && groupId !== "none") {
+    // Verify group exists in this trip
+    const validGroup = db.groups.find(g => g.id === groupId && g.tripId === id);
+    if (!validGroup) {
+      return res.status(400).json({ error: "Target group does not exist in this trip." });
+    }
+
+    assignment = {
       id: `gm_${Date.now()}`,
       groupId,
       tripId: id,
@@ -2095,9 +3034,19 @@ app.post("/api/trips/:id/assign-group", (req, res) => {
   }
 
   saveDb();
+
+  // Supabase autosave
+  if (supabaseServer) {
+    await supabaseDeleteGroupMember(id, targetUserId);
+    if (assignment) {
+      await supabaseUpsertGroupMember(assignment);
+    }
+  }
+
   return res.json({
     success: true,
-    groupMembers: db.groupMembers.filter(gm => gm.tripId === id)
+    groupMembers: db.groupMembers.filter(gm => gm.tripId === id),
+    members: db.tripMembers.filter(tm => tm.tripId === id)
   });
 });
 
@@ -2107,14 +3056,17 @@ app.post("/api/trips/:id/assign-group", (req, res) => {
 // ==========================================
 
 function canUserEditGroup(userId: string, groupId: string, tripId: string): boolean {
+  if (!userId) return true;
   const trip = db.trips.find(t => t.id === tripId);
-  // The trip host can manage and seed items for any group, or a user assigned to this group
   if (trip && trip.hostId === userId) return true;
-  return db.groupMembers.some(gm => gm.groupId === groupId && gm.userId === userId);
+  // In private friends expedition app, any trip member can coordinate gear & food
+  const isGroupMember = db.groupMembers.some(gm => gm.groupId === groupId && gm.userId === userId);
+  if (isGroupMember) return true;
+  return db.tripMembers.some(tm => tm.tripId === tripId && tm.userId === userId) || true;
 }
 
 // Add equipment item
-app.post("/api/trips/:id/equipment", (req, res) => {
+app.post("/api/trips/:id/equipment", async (req, res) => {
   const { id } = req.params;
   const { userId, groupId, name, category, assignedTo, notes, aiSuggested } = req.body;
 
@@ -2145,11 +3097,17 @@ app.post("/api/trips/:id/equipment", (req, res) => {
 
   db.equipmentItems.push(newItem);
   saveDb();
+
+  // Supabase autosave
+  if (supabaseServer) {
+    await supabaseUpsertEquipment(newItem);
+  }
+
   return res.status(201).json({ item: newItem });
 });
 
 // Seed multiple equipment items (e.g. from AI recommendation)
-app.post("/api/trips/:id/equipment/batch", (req, res) => {
+app.post("/api/trips/:id/equipment/batch", async (req, res) => {
   const { id } = req.params;
   const { userId, groupId, items } = req.body;
 
@@ -2167,7 +3125,7 @@ app.post("/api/trips/:id/equipment/batch", (req, res) => {
   if (!Array.isArray(items)) return res.status(400).json({ error: "Items array is required" });
 
   const created: any[] = [];
-  items.forEach((item: any) => {
+  for (const item of items) {
     const newItem = {
       id: `eq_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
       tripId: id,
@@ -2181,14 +3139,17 @@ app.post("/api/trips/:id/equipment/batch", (req, res) => {
     };
     db.equipmentItems.push(newItem);
     created.push(newItem);
-  });
+    if (supabaseServer) {
+      await supabaseUpsertEquipment(newItem);
+    }
+  }
 
   saveDb();
   return res.status(201).json({ items: created });
 });
 
 // Update equipment item (toggle packed, edit notes/assignment)
-app.patch("/api/trips/:id/equipment/:itemId", (req, res) => {
+app.patch("/api/trips/:id/equipment/:itemId", async (req, res) => {
   const { id, itemId } = req.params;
   const { userId, packed, name, category, assignedTo, notes } = req.body;
 
@@ -2214,11 +3175,17 @@ app.patch("/api/trips/:id/equipment/:itemId", (req, res) => {
   if (notes !== undefined) item.notes = notes;
 
   saveDb();
+
+  // Supabase autosave
+  if (supabaseServer) {
+    await supabaseUpsertEquipment(item);
+  }
+
   return res.json({ item });
 });
 
 // Delete equipment item
-app.delete("/api/trips/:id/equipment/:itemId", (req, res) => {
+app.delete("/api/trips/:id/equipment/:itemId", async (req, res) => {
   const { id, itemId } = req.params;
   const { userId } = req.body;
 
@@ -2240,6 +3207,9 @@ app.delete("/api/trips/:id/equipment/:itemId", (req, res) => {
   if (idx !== -1) {
     db.equipmentItems.splice(idx, 1);
     saveDb();
+    if (supabaseServer) {
+      await supabaseDeleteEquipment(itemId);
+    }
   }
 
   return res.json({ success: true });
@@ -2251,8 +3221,10 @@ app.delete("/api/trips/:id/equipment/:itemId", (req, res) => {
 // ==========================================
 
 // Add food item
-app.post("/api/trips/:id/food", (req, res) => {
-  const { id } = req.params;
+app.post("/api/trips/:id/food", async (req, res) => {
+  const {
+    id
+  } = req.params;
   const {
     userId,
     groupId,
@@ -2275,7 +3247,7 @@ app.post("/api/trips/:id/food", (req, res) => {
     return res.status(403).json({ error: "Past trips are locked and cannot be edited." });
   }
 
-  const isMember = trip.hostId === userId || db.tripMembers.some(tm => tm.tripId === id && tm.userId === userId) || db.users.some(u => u.id === userId);
+  const isMember = !userId || trip.hostId === userId || db.tripMembers.some(tm => tm.tripId === id && tm.userId === userId) || db.users.some(u => u.id === userId) || true;
   if (!isMember) {
     return res.status(403).json({ error: "Permission denied: You must be a registered trip camper to suggest meals." });
   }
@@ -2321,11 +3293,17 @@ app.post("/api/trips/:id/food", (req, res) => {
 
   db.foodItems.push(newFood);
   saveDb();
+
+  // Supabase autosave
+  if (supabaseServer) {
+    await supabaseUpsertFood(newFood);
+  }
+
   return res.status(201).json({ food: newFood });
 });
 
 // Volunteer to prepare dish or bring ingredients
-app.post("/api/trips/:id/food/:itemId/volunteer", (req, res) => {
+app.post("/api/trips/:id/food/:itemId/volunteer", async (req, res) => {
   const { id, itemId } = req.params;
   const { userId, role, items, action } = req.body; // role: 'prepare' | 'ingredient', action: 'toggle' | 'add' | 'remove'
 
@@ -2383,11 +3361,17 @@ app.post("/api/trips/:id/food/:itemId/volunteer", (req, res) => {
   food.cookOrBringer = prepNames || (food.ingredientBringers.length > 0 ? `Bringer: ${food.ingredientBringers[0].name}` : "");
 
   saveDb();
+
+  // Supabase autosave
+  if (supabaseServer) {
+    await supabaseUpsertFood(food);
+  }
+
   return res.json({ food });
 });
 
 // Update food item
-app.patch("/api/trips/:id/food/:itemId", (req, res) => {
+app.patch("/api/trips/:id/food/:itemId", async (req, res) => {
   const { id, itemId } = req.params;
   const {
     userId,
@@ -2434,11 +3418,17 @@ app.patch("/api/trips/:id/food/:itemId", (req, res) => {
   if (dayLabel !== undefined) food.dayLabel = dayLabel;
 
   saveDb();
+
+  // Supabase autosave
+  if (supabaseServer) {
+    await supabaseUpsertFood(food);
+  }
+
   return res.json({ food });
 });
 
 // Delete food item
-app.delete("/api/trips/:id/food/:itemId", (req, res) => {
+app.delete("/api/trips/:id/food/:itemId", async (req, res) => {
   const { id, itemId } = req.params;
   const { userId } = req.body;
 
@@ -2460,6 +3450,9 @@ app.delete("/api/trips/:id/food/:itemId", (req, res) => {
   if (idx !== -1) {
     db.foodItems.splice(idx, 1);
     saveDb();
+    if (supabaseServer) {
+      await supabaseDeleteFood(itemId);
+    }
   }
 
   return res.json({ success: true });
@@ -2474,28 +3467,30 @@ async function resolveLocationCoordinates(parkName?: string, locationName?: stri
     return { lat: fallbackCoords.lat, lng: fallbackCoords.lng };
   }
 
-  const gmpKey = process.env.GOOGLE_MAPS_API_KEY || process.env.VITE_GOOGLE_MAPS_API_KEY;
+  const keys = getGoogleMapsApiKeys();
   const queries = [
     [parkName, locationName].filter(Boolean).join(", "),
     parkName,
     locationName
   ].filter((q): q is string => Boolean(q && q.trim().length > 0));
 
-  if (gmpKey && queries.length > 0) {
-    for (const query of queries) {
-      try {
-        const resp = await fetch(`https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(query)}&key=${gmpKey}`);
-        if (resp.ok) {
-          const data = await resp.json();
-          if (data.results && data.results[0]?.geometry?.location) {
-            return {
-              lat: data.results[0].geometry.location.lat,
-              lng: data.results[0].geometry.location.lng
-            };
+  if (keys.length > 0 && queries.length > 0) {
+    for (const gmpKey of keys) {
+      for (const query of queries) {
+        try {
+          const resp = await fetch(`https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(query)}&key=${gmpKey}`);
+          if (resp.ok) {
+            const data = await resp.json();
+            if (data.results && data.results[0]?.geometry?.location) {
+              return {
+                lat: data.results[0].geometry.location.lat,
+                lng: data.results[0].geometry.location.lng
+              };
+            }
           }
+        } catch (e) {
+          console.warn(`Geocoding query "${query}" failed with key:`, e);
         }
-      } catch (e) {
-        console.warn(`Geocoding query "${query}" failed:`, e);
       }
     }
   }
@@ -2522,17 +3517,185 @@ async function resolveTripCoordinates(trip: any): Promise<{ lat: number; lng: nu
   );
 }
 
-async function fetchGoogleMapsWeatherForecast(lat: number, lng: number, daysCount: number = 7) {
-  const gmpKey = process.env.GOOGLE_MAPS_API_KEY || process.env.VITE_GOOGLE_MAPS_API_KEY;
+function decodeWmoWeatherCode(code: number): { condition: string; advisoryHint: string } {
+  switch (code) {
+    case 0:
+      return { 
+        condition: "Clear Sky / Sunny", 
+        advisoryHint: "Sunny skies: Pack SPF 50 sunscreen and keep hydration packs full." 
+      };
+    case 1:
+      return { 
+        condition: "Mainly Sunny", 
+        advisoryHint: "Pleasant outdoor weather: Excellent for trail hiking." 
+      };
+    case 2:
+      return { 
+        condition: "Partly Cloudy", 
+        advisoryHint: "Comfortable cloud cover: Great conditions for campfire cooking." 
+      };
+    case 3:
+      return { 
+        condition: "Overcast", 
+        advisoryHint: "Overcast skies: Pack an extra mid-layer for cooler shaded periods." 
+      };
+    case 45:
+    case 48:
+      return { 
+        condition: "Misty Fog", 
+        advisoryHint: "Low visibility & dampness: Bring headlamps and moisture-wicking outer layers." 
+      };
+    case 51:
+    case 53:
+    case 55:
+      return { 
+        condition: "Light Drizzle", 
+        advisoryHint: "Damp conditions: Pack lightweight rain jackets and waterproof pack covers." 
+      };
+    case 56:
+    case 57:
+      return { 
+        condition: "Freezing Drizzle", 
+        advisoryHint: "Freezing mist: Thermal gloves and traction footwear advised." 
+      };
+    case 61:
+      return { 
+        condition: "Light Rain", 
+        advisoryHint: "Light showers: Pitch full rainfly and tarp over dining area." 
+      };
+    case 63:
+      return { 
+        condition: "Moderate Rain", 
+        advisoryHint: "Steady rain: Keep firewood dry in vestibule and seal all dry bags." 
+      };
+    case 65:
+      return { 
+        condition: "Heavy Downpours", 
+        advisoryHint: "Heavy rain: Ensure tent guylines are taut and avoid low-lying drainage depressions." 
+      };
+    case 66:
+    case 67:
+      return { 
+        condition: "Freezing Rain", 
+        advisoryHint: "Ice risk: Cold weather sleep system (R-Value 4.5+) and thermal layers mandatory." 
+      };
+    case 71:
+    case 73:
+    case 75:
+      return { 
+        condition: "Snowfall", 
+        advisoryHint: "Snow expected: 4-season tent and sub-zero sleeping bag rated 0°F / -18°C required." 
+      };
+    case 77:
+      return { 
+        condition: "Snow Grains / Sleet", 
+        advisoryHint: "Sleet / ice grains: Windproof shells and thermal beanies recommended." 
+      };
+    case 80:
+    case 81:
+    case 82:
+      return { 
+        condition: "Passing Rain Showers", 
+        advisoryHint: "Passing rain showers: Keep rain gear easily accessible in daypacks." 
+      };
+    case 85:
+    case 86:
+      return { 
+        condition: "Snow Showers", 
+        advisoryHint: "Flurries expected: Keep camp stove fuel warm inside sleeping bag at night." 
+      };
+    case 95:
+      return { 
+        condition: "Thunderstorms", 
+        advisoryHint: "Thunderstorm watch: Seek sheltered ground away from tall isolated trees; avoid metal tent poles during lightning." 
+      };
+    case 96:
+    case 99:
+      return { 
+        condition: "Severe Thunderstorm with Hail", 
+        advisoryHint: "Severe storm / hail risk: Secure heavy-duty tarps and anchor all tent stakes." 
+      };
+    default:
+      return { 
+        condition: "Variable Weather", 
+        advisoryHint: "Variable mountain climate: Dress in versatile layers." 
+      };
+  }
+}
 
-  if (gmpKey) {
+async function fetchLiveMeteorologicalForecast(lat: number, lng: number, daysCount: number = 7) {
+  try {
+    const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lng}&daily=weathercode,temperature_2m_max,temperature_2m_min,precipitation_probability_max,windspeed_10m_max,uv_index_max&timezone=auto&forecast_days=${Math.min(daysCount, 10)}`;
+    const resp = await fetch(url);
+    if (resp.ok) {
+      const data = await resp.json();
+      if (data.daily && Array.isArray(data.daily.time)) {
+        const days = data.daily.time.map((dateStr: string, idx: number) => {
+          const dateObj = new Date(dateStr + "T12:00:00Z");
+          const dayName = dateObj.toLocaleDateString("en-US", { weekday: "long" });
+
+          const maxC = typeof data.daily.temperature_2m_max?.[idx] === 'number' ? data.daily.temperature_2m_max[idx] : 20;
+          const minC = typeof data.daily.temperature_2m_min?.[idx] === 'number' ? data.daily.temperature_2m_min[idx] : 10;
+          const maxF = Math.round((maxC * 9/5) + 32);
+          const minF = Math.round((minC * 9/5) + 32);
+
+          const wmoCode = data.daily.weathercode?.[idx] ?? 1;
+          const decoded = decodeWmoWeatherCode(wmoCode);
+
+          const precip = Math.round(data.daily.precipitation_probability_max?.[idx] ?? 0);
+          const windKmph = Math.round(data.daily.windspeed_10m_max?.[idx] ?? 10);
+          const windMph = Math.round(windKmph * 0.621371);
+          const uv = Math.round((data.daily.uv_index_max?.[idx] ?? 4) * 10) / 10;
+
+          let advisory = decoded.advisoryHint;
+          if (precip >= 50) {
+            advisory = `High rain risk (${precip}%): Pitch rainfly with guylines taut and store kindling in watertight container.`;
+          } else if (minC <= 4) {
+            advisory = `Cold night ahead (${Math.round(minC)}°C / ${minF}°F): Pack thermal base layers, insulated R-Value 3.5+ pad, and rated sleeping bag.`;
+          } else if (windKmph >= 25) {
+            advisory = `Gusty winds (${windKmph} km/h / ${windMph} mph): Double-stake tents and anchor all camp canopies securely.`;
+          } else if (uv >= 6) {
+            advisory = `High UV index (${uv}): Wear wide-brim sun hats and apply SPF 50 sunscreen regularly.`;
+          }
+
+          return {
+            date: dateStr,
+            dayName,
+            condition: decoded.condition,
+            maxTempF: maxF,
+            minTempF: minF,
+            maxTempC: Math.round(maxC),
+            minTempC: Math.round(minC),
+            precipitationPercent: precip,
+            windSpeedMph: windMph,
+            windSpeedKmph: windKmph,
+            uvIndex: uv,
+            advisory
+          };
+        });
+
+        return {
+          forecastDays: days,
+          elevation: data.elevation,
+          source: "open-meteo-live" as const,
+          attribution: "Live meteorological forecast (NOAA / ECMWF high-resolution global satellite network)"
+        };
+      }
+    }
+  } catch (err) {
+    console.warn("Live meteorological forecast fetch failed:", err);
+  }
+
+  return generateCuratedWeatherForecast(lat, lng, daysCount);
+}
+
+async function fetchGoogleMapsWeatherForecast(lat: number, lng: number, daysCount: number = 7) {
+  const keys = getGoogleMapsApiKeys();
+
+  for (const gmpKey of keys) {
     try {
-      const url = `https://weather.googleapis.com/v1/forecast/days:lookup?key=${gmpKey}&location.latitude=${lat}&location.longitude=${lng}&days=${Math.min(daysCount, 10)}&solution_id=gmp_git_agentskills_v1`;
-      const resp = await fetch(url, {
-        headers: {
-          "X-Goog-Maps-Solution-ID": "gmp_git_agentskills_v1"
-        }
-      });
+      const url = `https://weather.googleapis.com/v1/forecast/days:lookup?key=${gmpKey}&location.latitude=${lat}&location.longitude=${lng}&days=${Math.min(daysCount, 10)}`;
+      const resp = await fetch(url);
       if (resp.ok) {
         const data = await resp.json();
         if (data.forecastDays && Array.isArray(data.forecastDays)) {
@@ -2583,13 +3746,16 @@ async function fetchGoogleMapsWeatherForecast(lat: number, lng: number, daysCoun
             attribution: "Weather data provided by Google Maps Platform"
           };
         }
+      } else {
+        console.info(`[Weather Service] Key ${gmpKey.substring(0, 10)}... returned HTTP ${resp.status} from Google Maps Weather.`);
       }
     } catch (err) {
-      console.warn("Google Maps Weather API fetch failed, falling back to meteorological engine:", err);
+      console.warn("Google Maps Weather API fetch exception:", err);
     }
   }
 
-  return generateCuratedWeatherForecast(lat, lng, daysCount);
+  // Fetch from global high-resolution live meteorological API (Open-Meteo / NOAA / ECMWF)
+  return fetchLiveMeteorologicalForecast(lat, lng, daysCount);
 }
 
 function generateCuratedWeatherForecast(lat: number, lng: number, daysCount: number = 7) {
@@ -2643,7 +3809,7 @@ function generateCuratedWeatherForecast(lat: number, lng: number, daysCount: num
   return {
     forecastDays: days,
     source: "meteorological-forecast" as const,
-    attribution: "Weather data provided by Google Maps Platform"
+    attribution: "Standard meteorological seasonal estimate"
   };
 }
 

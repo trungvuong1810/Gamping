@@ -45,12 +45,13 @@ export interface WeatherReport {
   location: string;
   latitude: number;
   longitude: number;
+  elevation?: number;
   daysUntilDeparture: number;
   forecastDays: WeatherForecastDay[];
   summary: string;
   gearRecommendations: string[];
   attribution: string;
-  source: 'google-maps-weather' | 'meteorological-forecast';
+  source: 'google-maps-weather' | 'open-meteo-live' | 'meteorological-forecast';
 }
 
 export interface Trip {
@@ -67,6 +68,11 @@ export interface Trip {
   passwordExpiresAt?: string;
   createdAt: string;
   weatherAlertConfig?: WeatherAlertConfig;
+  googleSpreadsheetId?: string;
+  googleSpreadsheetUrl?: string;
+  googleSpreadsheetTitle?: string;
+  googleSpreadsheetLastSynced?: string;
+  googleSpreadsheetSyncStatus?: 'connected' | 'syncing' | 'error' | 'not_connected';
 }
 
 export interface TripMember {
@@ -173,7 +179,7 @@ export interface Friend {
 
 export interface LongWeekendOption {
   name: string;
-  country: 'CA' | 'US';
+  country: 'CA' | 'US' | 'CA / US';
   dates: string;
   startDate: string;
   endDate: string;

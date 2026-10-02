@@ -113,12 +113,12 @@ export const WeatherAlertView: React.FC<WeatherAlertViewProps> = ({
       return <CloudRain className="w-6 h-6 text-neutral-800" />;
     }
     if (c.includes('clear') || c.includes('sunny')) {
-      return <Sun className="w-6 h-6 text-[#3A3B3A]" />;
+      return <Sun className="w-6 h-6 text-black" />;
     }
     if (c.includes('wind')) {
       return <Wind className="w-6 h-6 text-neutral-700" />;
     }
-    return <CloudSun className="w-6 h-6 text-[#3A3B3A]" />;
+    return <CloudSun className="w-6 h-6 text-black" />;
   };
 
   // Calculate days until trip departure
@@ -135,8 +135,11 @@ export const WeatherAlertView: React.FC<WeatherAlertViewProps> = ({
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
             <div className="flex items-center gap-2 mb-1.5">
-              <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold uppercase tracking-wider bg-neutral-100 text-[#3A3B3A] border border-neutral-200">
-                Google Maps Weather Service
+              <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold uppercase tracking-wider bg-emerald-50 text-emerald-800 border border-emerald-200 flex items-center gap-1.5">
+                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                {weatherData?.source === 'google-maps-weather' 
+                  ? 'Google Maps Weather Platform' 
+                  : 'Live Meteorological Satellite Feed'}
               </span>
               {daysUntil > 0 && daysUntil <= 7 ? (
                 <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold uppercase tracking-wider bg-emerald-100 text-emerald-800 border border-emerald-200 flex items-center gap-1">
@@ -154,12 +157,18 @@ export const WeatherAlertView: React.FC<WeatherAlertViewProps> = ({
                 </span>
               )}
             </div>
-            <h2 className="text-xl sm:text-2xl font-semibold tracking-tight text-[#3A3B3A]">
+            <h2 className="text-xl sm:text-2xl font-semibold tracking-tight text-black">
               7-Day Pre-Trip Weather Briefing
             </h2>
-            <p className="text-xs sm:text-sm text-neutral-500 mt-1 flex items-center gap-2">
+            <p className="text-xs sm:text-sm text-neutral-500 mt-1 flex items-center gap-2 flex-wrap">
               <MapPin className="w-3.5 h-3.5 shrink-0" />
               <span>{trip.parkDetails?.name || trip.title} &bull; {trip.location}</span>
+              {weatherData?.latitude && (
+                <span className="font-mono text-[11px] text-neutral-400 bg-neutral-100 px-2 py-0.5 rounded-md">
+                  {Math.abs(weatherData.latitude).toFixed(2)}°{weatherData.latitude >= 0 ? 'N' : 'S'}, {Math.abs(weatherData.longitude).toFixed(2)}°{weatherData.longitude >= 0 ? 'E' : 'W'}
+                  {typeof weatherData.elevation === 'number' && ` • Elev ${Math.round(weatherData.elevation)}m (${Math.round(weatherData.elevation * 3.28084)}ft)`}
+                </span>
+              )}
             </p>
           </div>
 
@@ -176,9 +185,9 @@ export const WeatherAlertView: React.FC<WeatherAlertViewProps> = ({
         </div>
 
         {/* Status description pill */}
-        <div className="mt-5 p-4 rounded-xl border border-neutral-200 bg-neutral-50/70 text-xs sm:text-sm text-[#3A3B3A] flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+        <div className="mt-5 p-4 rounded-xl border border-neutral-200 bg-neutral-50/70 text-xs sm:text-sm text-black flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
           <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-lg bg-[#3A3B3A] text-white flex items-center justify-center shrink-0">
+            <div className="w-8 h-8 rounded-lg bg-black text-white flex items-center justify-center shrink-0">
               <Mail className="w-4 h-4" />
             </div>
             <div>
@@ -197,7 +206,7 @@ export const WeatherAlertView: React.FC<WeatherAlertViewProps> = ({
             className={`px-3 py-1.5 rounded-lg text-xs font-medium transition shrink-0 ${
               autoAlert 
                 ? 'bg-neutral-200 text-neutral-800 hover:bg-neutral-300' 
-                : 'bg-[#3A3B3A] text-white hover:bg-neutral-800'
+                : 'bg-black text-white hover:bg-neutral-800'
             }`}
           >
             {autoAlert ? 'Disable Auto-Alert' : 'Enable 1-Wk Alert'}
@@ -209,8 +218,8 @@ export const WeatherAlertView: React.FC<WeatherAlertViewProps> = ({
       <div className="p-6 rounded-2xl border border-neutral-200 bg-white shadow-sm space-y-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <Sparkles className="w-4 h-4 text-[#3A3B3A]" />
-            <h3 className="text-sm font-semibold text-[#3A3B3A] uppercase tracking-wider">
+            <Sparkles className="w-4 h-4 text-black" />
+            <h3 className="text-sm font-semibold text-black uppercase tracking-wider">
               Deliver Weather Briefing to Email
             </h3>
           </div>
@@ -234,7 +243,7 @@ export const WeatherAlertView: React.FC<WeatherAlertViewProps> = ({
                 name="recipientChoice" 
                 checked={sendToAll} 
                 onChange={() => setSendToAll(true)}
-                className="text-[#3A3B3A] focus:ring-[#3A3B3A]"
+                className="text-black focus:ring-black"
               />
               <span>Send to all {members.length} trip members</span>
             </label>
@@ -244,7 +253,7 @@ export const WeatherAlertView: React.FC<WeatherAlertViewProps> = ({
                 name="recipientChoice" 
                 checked={!sendToAll} 
                 onChange={() => setSendToAll(false)}
-                className="text-[#3A3B3A] focus:ring-[#3A3B3A]"
+                className="text-black focus:ring-black"
               />
               <span>Send test to my email</span>
             </label>
@@ -256,7 +265,7 @@ export const WeatherAlertView: React.FC<WeatherAlertViewProps> = ({
               value={customEmail}
               onChange={(e) => setCustomEmail(e.target.value)}
               placeholder="camper@example.com"
-              className="px-3 py-1.5 text-xs rounded-lg border border-neutral-300 focus:outline-none focus:ring-1 focus:ring-[#3A3B3A] flex-1 max-w-xs"
+              className="px-3 py-1.5 text-xs rounded-lg border border-neutral-300 focus:outline-none focus:ring-1 focus:ring-black flex-1 max-w-xs"
             />
           )}
 
@@ -264,7 +273,7 @@ export const WeatherAlertView: React.FC<WeatherAlertViewProps> = ({
             onClick={handleSendReport}
             disabled={sending || loading}
             id="btn-dispatch-weather-email"
-            className="flex items-center justify-center gap-2 px-4 py-2 bg-[#3A3B3A] text-white text-xs font-semibold rounded-xl hover:bg-neutral-800 transition disabled:opacity-50 shrink-0"
+            className="flex items-center justify-center gap-2 px-4 py-2 bg-black text-white text-xs font-semibold rounded-xl hover:bg-neutral-800 transition disabled:opacity-50 shrink-0"
           >
             <Send className="w-3.5 h-3.5" />
             <span>{sending ? 'Dispatching Email...' : 'Send 7-Day Weather Briefing Now'}</span>
@@ -297,7 +306,7 @@ export const WeatherAlertView: React.FC<WeatherAlertViewProps> = ({
       {/* 3. Day-by-Day Forecast Cards */}
       <div className="space-y-3">
         <div className="flex items-center justify-between">
-          <h3 className="text-sm font-semibold text-[#3A3B3A] uppercase tracking-wider flex items-center gap-2">
+          <h3 className="text-sm font-semibold text-black uppercase tracking-wider flex items-center gap-2">
             <Calendar className="w-4 h-4" />
             Camping Days Meteorological Forecast
           </h3>
@@ -335,7 +344,7 @@ export const WeatherAlertView: React.FC<WeatherAlertViewProps> = ({
 
         {loading ? (
           <div className="p-12 text-center border border-neutral-200 rounded-2xl bg-white">
-            <RefreshCw className="w-6 h-6 animate-spin text-[#3A3B3A] mx-auto mb-2" />
+            <RefreshCw className="w-6 h-6 animate-spin text-black mx-auto mb-2" />
             <p className="text-xs text-neutral-500">Querying Google Maps Platform Weather API for campsite coordinates...</p>
           </div>
         ) : weatherData?.forecastDays && weatherData.forecastDays.length > 0 ? (
@@ -418,8 +427,8 @@ export const WeatherAlertView: React.FC<WeatherAlertViewProps> = ({
       {weatherData?.gearRecommendations && weatherData.gearRecommendations.length > 0 && (
         <div className="p-6 rounded-2xl border border-neutral-200 bg-white shadow-sm space-y-3">
           <div className="flex items-center gap-2">
-            <ShieldCheck className="w-4 h-4 text-[#3A3B3A]" />
-            <h3 className="text-sm font-semibold text-[#3A3B3A] uppercase tracking-wider">
+            <ShieldCheck className="w-4 h-4 text-black" />
+            <h3 className="text-sm font-semibold text-black uppercase tracking-wider">
               Automated Camping Pack & Gear Advisories
             </h3>
           </div>
@@ -440,10 +449,10 @@ export const WeatherAlertView: React.FC<WeatherAlertViewProps> = ({
         </div>
       )}
 
-      {/* 5. Mandatory Google Maps Platform Attribution (dedicated separate line) */}
+      {/* 5. Weather Attribution */}
       <div className="text-center pt-4 pb-2 border-t border-neutral-200">
         <p className="text-xs text-neutral-400 font-normal">
-          Weather data provided by Google Maps Platform
+          {weatherData?.attribution || "Weather data provided by Google Maps Platform"}
         </p>
       </div>
 

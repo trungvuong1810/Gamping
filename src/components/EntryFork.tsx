@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Trip, User } from '../types';
-import { Compass, UserCheck, Plus, Calendar, ArrowRight, ShieldCheck, MapPin, Users, Lock, Trash2, UserPlus, LogIn, Sparkles } from 'lucide-react';
+import { Compass, UserCheck, Plus, Calendar, ArrowRight, ShieldCheck, MapPin, Users, Lock, Trash2, UserPlus, LogIn, Sparkles, KeyRound } from 'lucide-react';
 
 interface EntryForkProps {
   currentUser: User | null;
@@ -9,8 +9,8 @@ interface EntryForkProps {
   pastTrips: Trip[];
   onSelectTrip: (trip: Trip) => void;
   onNavigate: (view: 'host' | 'join' | 'account') => void;
-  onOpenCreateAccount: () => void;
-  onOpenLogIn: (reason?: string) => void;
+  onOpenCreateAccount: (reason?: string, nextView?: 'home' | 'host' | 'join' | 'trip' | 'account') => void;
+  onOpenLogIn: (reason?: string, nextView?: 'home' | 'host' | 'join' | 'trip' | 'account') => void;
   onDeleteTrip?: (tripId: string) => void;
 }
 
@@ -41,36 +41,65 @@ export const EntryFork: React.FC<EntryForkProps> = ({
 
   const handleHostClick = () => {
     if (!isSignedIn || !currentUser) {
-      onOpenLogIn('Please sign in or create an account to host a trip.');
+      onOpenLogIn('Please log in or create an account to host a trip.', 'host');
       return;
     }
     onNavigate('host');
   };
 
+  const handleJoinClick = () => {
+    if (!isSignedIn || !currentUser) {
+      onOpenLogIn('Please log in with your Name & 4-digit PIN before joining a trip. If you do not have an account yet, you can create one quickly below.', 'join');
+      return;
+    }
+    onNavigate('join');
+  };
+
   const handleAccountClick = () => {
     if (!isSignedIn || !currentUser) {
-      onOpenLogIn('Please sign in or create an account to view your Account & History.');
+      onOpenLogIn('Please sign in or create an account to view your Account & History.', 'account');
       return;
     }
     onNavigate('account');
   };
 
   return (
-    <div className="max-w-4xl mx-auto py-12 px-4 sm:px-6">
+    <div className="max-w-5xl mx-auto py-12 px-4 sm:px-6">
       
       {/* Editorial Clearing Header */}
-      <div className="text-center max-w-2xl mx-auto mb-12">
-        <h1 className="text-4xl sm:text-5xl font-semibold tracking-tight text-[#3A3B3A] mb-3 uppercase">
+      <div className="text-center max-w-2xl mx-auto mb-10">
+        <h1 className="text-4xl sm:text-5xl font-semibold tracking-tight text-black mb-3 uppercase">
           GAMPING
         </h1>
         <p className="text-sm sm:text-base text-neutral-500 font-normal leading-relaxed">
           Multi-group camping coordination. One system of record for dates, site choices, group boundaries, and AI-informed equipment and food lists.
         </p>
+
+        {/* Quick Action Hero Buttons */}
+        <div className="flex flex-wrap items-center justify-center gap-3 mt-6">
+          <button
+            type="button"
+            onClick={handleHostClick}
+            id="hero-host-trip-btn"
+            className="min-h-[44px] px-5 py-2.5 bg-neutral-950 text-white rounded-xl hover:bg-neutral-800 transition text-xs font-semibold flex items-center gap-2 shadow-xs"
+          >
+            <Plus className="w-4 h-4" />
+            <span>Host a Trip</span>
+          </button>
+          <button
+            type="button"
+            onClick={handleJoinClick}
+            id="hero-join-trip-btn"
+            className="min-h-[44px] px-5 py-2.5 bg-white border border-neutral-300 text-neutral-900 rounded-xl hover:bg-neutral-50 transition text-xs font-semibold flex items-center gap-2 shadow-2xs"
+          >
+            <KeyRound className="w-4 h-4 text-amber-600" />
+            <span>Join a Trip</span>
+          </button>
+        </div>
       </div>
 
-
       {/* The Core Paths */}
-      <div className={`grid grid-cols-1 ${!isSignedIn || !currentUser ? 'md:grid-cols-3' : 'md:grid-cols-2'} gap-5 mb-14`}>
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-5 mb-14">
         
         {/* Path 1: Host Trip */}
         <div
@@ -84,7 +113,7 @@ export const EntryFork: React.FC<EntryForkProps> = ({
             </div>
             <h2 className="text-lg font-semibold text-neutral-950 mb-1.5">Host a Trip</h2>
             <p className="text-xs text-neutral-500 leading-relaxed mb-4">
-              Pick dates (calendar or statutory holiday long weekends), invite friends via email, get AI destination recommendations, and configure groups.
+              Pick dates (calendar or statutory holiday long weekends), share Trip Name &amp; Password with friends in chat, get AI destination recommendations, and configure groups.
             </p>
           </div>
           <div className="flex items-center gap-1.5 text-xs font-semibold text-neutral-950 group-hover:translate-x-1 transition pt-2 border-t border-neutral-100">
@@ -93,44 +122,26 @@ export const EntryFork: React.FC<EntryForkProps> = ({
           </div>
         </div>
 
-        {/* Path 2: Create Account / Log In (Only shown when not signed in) */}
-        {(!isSignedIn || !currentUser) && (
-          <div
-            id="entry-auth-card"
-            className="group text-left p-6 rounded-2xl border border-neutral-200 bg-white hover:border-neutral-900 transition-all duration-200 shadow-sm flex flex-col justify-between"
-          >
-            <div>
-              <div className="w-10 h-10 rounded-xl bg-neutral-100 text-neutral-900 flex items-center justify-center mb-4 group-hover:bg-neutral-200 transition">
-                <UserPlus className="w-5 h-5" />
-              </div>
-              <h2 className="text-lg font-semibold text-neutral-950 mb-1.5">Create Account</h2>
-              <p className="text-xs text-neutral-500 leading-relaxed mb-4">
-                Create your camper profile with username, email, and password to save trips, track equipment, and coordinate meals.
-              </p>
+        {/* Path 2: Join a Trip */}
+        <div
+          onClick={handleJoinClick}
+          id="entry-join-trip-card"
+          className="group text-left p-6 rounded-2xl border border-neutral-200 bg-white hover:border-neutral-900 transition-all duration-200 shadow-sm flex flex-col justify-between cursor-pointer"
+        >
+          <div>
+            <div className="w-10 h-10 rounded-xl bg-amber-500/10 text-amber-900 flex items-center justify-center mb-4 group-hover:scale-105 transition">
+              <KeyRound className="w-5 h-5 text-amber-600" />
             </div>
-            <div className="pt-2 border-t border-neutral-100 space-y-2">
-              <button
-                type="button"
-                onClick={onOpenCreateAccount}
-                id="entry-create-account-btn"
-                className="w-full flex items-center justify-center gap-1.5 py-2 px-3 text-xs font-semibold rounded-lg bg-neutral-950 text-white hover:bg-neutral-800 transition shadow-xs"
-              >
-                <UserPlus className="w-3.5 h-3.5" />
-                <span>Create Account</span>
-              </button>
-              <div className="text-center">
-                <button
-                  type="button"
-                  onClick={() => onOpenLogIn()}
-                  id="entry-login-btn"
-                  className="text-xs text-neutral-500 hover:text-neutral-950 transition font-medium"
-                >
-                  Already have an account? <span className="font-semibold underline">Log In</span>
-                </button>
-              </div>
-            </div>
+            <h2 className="text-lg font-semibold text-neutral-950 mb-1.5">Join a Trip</h2>
+            <p className="text-xs text-neutral-500 leading-relaxed mb-4">
+              Received a Trip Name and Password in your group chat? Enter them to unlock and join your squad's camping trip.
+            </p>
           </div>
-        )}
+          <div className="flex items-center gap-1.5 text-xs font-semibold text-neutral-950 group-hover:translate-x-1 transition pt-2 border-t border-neutral-100">
+            <span>Enter Trip Credentials</span>
+            <ArrowRight className="w-3.5 h-3.5" />
+          </div>
+        </div>
 
         {/* Path 3: Account & History */}
         <div
@@ -142,7 +153,7 @@ export const EntryFork: React.FC<EntryForkProps> = ({
             <div className="w-10 h-10 rounded-xl bg-neutral-100 text-neutral-900 flex items-center justify-center mb-4 group-hover:bg-neutral-200 transition">
               <UserCheck className="w-5 h-5" />
             </div>
-            <h2 className="text-lg font-semibold text-neutral-950 mb-1.5">Account & History</h2>
+            <h2 className="text-lg font-semibold text-neutral-950 mb-1.5">Account &amp; History</h2>
             <p className="text-xs text-neutral-500 leading-relaxed mb-4">
               {isSignedIn && currentUser
                 ? `Signed in as ${currentUser.name}. Review past archived trips, frequent friends roster, and group settings.`
@@ -157,30 +168,43 @@ export const EntryFork: React.FC<EntryForkProps> = ({
 
       </div>
 
-      {/* Guest Welcome Banner when not signed in */}
+      {/* Guest Welcome & Auth Banner when not signed in */}
       {!isSignedIn && (
-        <div className="mb-10 p-6 rounded-2xl border border-neutral-200 bg-neutral-50/80 text-center">
-          <div className="max-w-md mx-auto">
-            <h3 className="text-sm font-semibold text-neutral-950 mb-1.5">
-              Ready to coordinate your next camping adventure?
+        <div className="mb-10 p-6 rounded-2xl border border-neutral-200 bg-neutral-50/90 text-center shadow-xs">
+          <div className="max-w-lg mx-auto">
+            <h3 className="text-base font-semibold text-neutral-950 mb-1.5">
+              Have a trip password or planning a new adventure?
             </h3>
-            <p className="text-xs text-neutral-500 mb-4">
-              Sign in or create an account to view your active trips, manage gear, and collaborate on food with your camp crew.
+            <p className="text-xs text-neutral-500 mb-5 leading-relaxed">
+              Log in with your Name &amp; 4-digit PIN to join existing trips or view your past camping memories. Don't have an account yet? Create one in seconds.
             </p>
-            <div className="flex items-center justify-center gap-2.5">
+            <div className="flex flex-wrap items-center justify-center gap-2.5">
               <button
                 type="button"
-                onClick={onOpenCreateAccount}
-                className="px-4 py-2 text-xs font-semibold bg-neutral-950 text-white rounded-lg hover:bg-neutral-800 transition"
+                onClick={handleJoinClick}
+                id="entry-banner-join-btn"
+                className="px-4 py-2.5 text-xs font-semibold bg-neutral-950 text-white rounded-xl hover:bg-neutral-800 transition flex items-center gap-1.5 shadow-xs"
               >
-                Create Account
+                <KeyRound className="w-3.5 h-3.5 text-amber-300" />
+                <span>Join a Trip</span>
               </button>
               <button
                 type="button"
-                onClick={() => onOpenLogIn()}
-                className="px-4 py-2 text-xs font-semibold bg-white border border-neutral-200 text-neutral-800 rounded-lg hover:bg-neutral-100 transition"
+                onClick={() => onOpenLogIn('Please log in with your Name & 4-digit PIN.')}
+                id="entry-banner-login-btn"
+                className="px-4 py-2.5 text-xs font-semibold bg-white border border-neutral-300 text-neutral-800 rounded-xl hover:bg-neutral-100 transition flex items-center gap-1.5"
               >
-                Log In
+                <LogIn className="w-3.5 h-3.5" />
+                <span>Log In</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => onOpenCreateAccount('Create your camper profile with Name & 4-digit PIN.')}
+                id="entry-banner-create-btn"
+                className="px-4 py-2.5 text-xs font-semibold bg-neutral-200/80 text-neutral-900 rounded-xl hover:bg-neutral-200 transition flex items-center gap-1.5"
+              >
+                <UserPlus className="w-3.5 h-3.5" />
+                <span>Create Account</span>
               </button>
             </div>
           </div>
@@ -194,7 +218,7 @@ export const EntryFork: React.FC<EntryForkProps> = ({
             <h2 className="text-xs font-semibold uppercase tracking-wider text-neutral-400">
               Active Trips ({activeTrips.length})
             </h2>
-            <span className="text-xs text-neutral-400">Camper: {currentUser.email}</span>
+            <span className="text-xs text-neutral-400">Camper: {currentUser.name}</span>
           </div>
 
           <div className="space-y-3">
@@ -202,7 +226,7 @@ export const EntryFork: React.FC<EntryForkProps> = ({
               <div
                 key={trip.id}
                 onClick={() => onSelectTrip(trip)}
-                className="p-5 rounded-xl border border-neutral-200 bg-white hover:border-neutral-950 transition cursor-pointer flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-sm"
+                className="p-5 rounded-xl border border-neutral-200 bg-white hover:border-neutral-900 transition cursor-pointer flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-sm"
               >
                 <div>
                   <div className="flex items-center gap-2 mb-1.5">
@@ -248,77 +272,80 @@ export const EntryFork: React.FC<EntryForkProps> = ({
         </div>
       )}
 
-      {/* Past Trips Snapshot */}
-      {isSignedIn && pastTrips.length > 0 && (
-        <div className="p-5 rounded-2xl border border-neutral-200 bg-neutral-50/50">
-          <div className="flex items-center justify-between mb-3">
-            <div className="flex items-center gap-2">
-              <Lock className="w-3.5 h-3.5 text-neutral-400" />
-              <h3 className="text-xs font-semibold uppercase tracking-wider text-neutral-500">
-                Past Trips (Locked & Read-Only)
-              </h3>
-            </div>
-            <button
-              onClick={() => onNavigate('account')}
-              className="text-xs text-neutral-600 hover:text-neutral-950 underline underline-offset-2"
-            >
-              View in Memory
-            </button>
-          </div>
+      {/* Past Trips Archive Section (Shown when user is signed in) */}
+      {isSignedIn && currentUser && pastTrips.length > 0 && (
+        <div>
+          <h2 className="text-xs font-semibold uppercase tracking-wider text-neutral-400 mb-4">
+            Past Trips Archive ({pastTrips.length})
+          </h2>
 
-          <div className="space-y-2">
-            {pastTrips.map((pt) => (
+          <div className="space-y-3 opacity-80 hover:opacity-100 transition-opacity">
+            {pastTrips.map((trip) => (
               <div
-                key={pt.id}
-                onClick={() => onSelectTrip(pt)}
-                className="p-3.5 rounded-lg border border-neutral-200/80 bg-white/70 hover:bg-white transition cursor-pointer flex items-center justify-between opacity-80 hover:opacity-100"
+                key={trip.id}
+                onClick={() => onSelectTrip(trip)}
+                className="p-5 rounded-xl border border-neutral-200 bg-neutral-50 hover:bg-white hover:border-neutral-400 transition cursor-pointer flex flex-col sm:flex-row sm:items-center justify-between gap-4"
               >
                 <div>
-                  <div className="text-sm font-medium text-neutral-700">{pt.title}</div>
-                  <div className="text-xs text-neutral-400">{pt.startDate} • {pt.location}</div>
+                  <div className="flex items-center gap-2 mb-1.5">
+                    <span className="font-medium text-neutral-700 text-base">{trip.title}</span>
+                    <span className="text-[11px] px-2 py-0.5 rounded-md bg-neutral-200/60 text-neutral-600 font-medium">
+                      Archived (Read-Only)
+                    </span>
+                  </div>
+                  <div className="flex flex-wrap items-center gap-4 text-xs text-neutral-400">
+                    <span className="flex items-center gap-1.5">
+                      <Calendar className="w-3.5 h-3.5" />
+                      {trip.startDate} to {trip.endDate}
+                    </span>
+                    <span className="flex items-center gap-1.5">
+                      <MapPin className="w-3.5 h-3.5" />
+                      {trip.location}
+                    </span>
+                  </div>
                 </div>
-                <span className="text-[11px] font-mono px-2 py-0.5 rounded bg-neutral-100 text-neutral-500">
-                  Frozen
-                </span>
+
+                <div className="flex items-center gap-2 self-end sm:self-center">
+                  <button
+                    type="button"
+                    onClick={(e) => confirmDelete(trip, e)}
+                    title="Delete archived trip"
+                    className="p-2 text-neutral-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                  <button className="px-3.5 py-1.5 text-xs font-medium border border-neutral-200 text-neutral-700 rounded-lg hover:bg-neutral-100 transition">
+                    View Archive
+                  </button>
+                </div>
               </div>
             ))}
           </div>
         </div>
       )}
 
-      {/* Delete Trip Confirmation Modal */}
+      {/* Confirmation Modal for Delete */}
       {tripToDelete && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-neutral-950/60 backdrop-blur-xs animate-in fade-in duration-150">
-          <div className="bg-white rounded-2xl shadow-2xl border border-neutral-200 max-w-md w-full p-6 space-y-4">
-            <div className="flex items-center gap-3 text-red-600">
-              <div className="w-10 h-10 rounded-xl bg-red-50 flex items-center justify-center shrink-0 border border-red-100">
-                <Trash2 className="w-5 h-5" />
-              </div>
-              <div>
-                <h3 className="text-base font-bold text-neutral-950">Delete Camping Trip?</h3>
-                <p className="text-xs text-neutral-500">This action is permanent and cannot be undone.</p>
-              </div>
-            </div>
-
-            <p className="text-xs text-neutral-600 leading-relaxed bg-neutral-50 p-3 rounded-xl border border-neutral-100">
-              Are you sure you want to delete <strong className="text-neutral-950">"{tripToDelete.title}"</strong> ({tripToDelete.location})? All associated groups, assigned gear, and planned menus will be removed.
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-neutral-950/60 backdrop-blur-xs">
+          <div className="bg-white rounded-2xl p-6 max-w-sm w-full shadow-2xl border border-neutral-200 animate-in fade-in zoom-in-95 duration-150">
+            <h3 className="text-base font-semibold text-neutral-950 mb-2">Delete Trip</h3>
+            <p className="text-xs text-neutral-600 mb-6 leading-relaxed">
+              Are you sure you want to permanently delete <strong className="text-neutral-900">"{tripToDelete.title}"</strong>? This will remove all associated group records, equipment, and meal allocations.
             </p>
-
-            <div className="flex items-center justify-end gap-2.5 pt-2">
+            <div className="flex justify-end gap-2">
               <button
                 type="button"
                 onClick={() => setTripToDelete(null)}
-                className="px-4 py-2 text-xs font-semibold text-neutral-600 hover:text-neutral-950 transition rounded-xl"
+                className="px-4 py-2 text-xs font-medium text-neutral-600 hover:text-neutral-900 transition"
               >
                 Cancel
               </button>
               <button
                 type="button"
                 onClick={handleExecuteDelete}
-                className="px-4 py-2 text-xs font-semibold bg-red-600 hover:bg-red-700 text-white rounded-xl transition shadow-xs flex items-center gap-1.5"
+                className="px-4 py-2 text-xs font-medium bg-red-600 hover:bg-red-700 text-white rounded-lg transition shadow-xs"
               >
-                <Trash2 className="w-3.5 h-3.5" />
-                <span>Confirm Delete Trip</span>
+                Delete Permanently
               </button>
             </div>
           </div>
@@ -328,4 +355,3 @@ export const EntryFork: React.FC<EntryForkProps> = ({
     </div>
   );
 };
-

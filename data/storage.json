@@ -1,671 +1,122 @@
 {
   "users": [
     {
-      "id": "usr_host",
-      "email": "alex.camper@gmail.com",
-      "name": "Alex Rivers"
-    },
-    {
-      "id": "usr_sara",
-      "email": "sara.k@gmail.com",
-      "name": "Sara Kelly"
-    },
-    {
-      "id": "usr_marcus",
-      "email": "marcus.t@gmail.com",
-      "name": "Marcus Thorne"
-    },
-    {
-      "id": "usr_elena",
-      "email": "elena.v@gmail.com",
-      "name": "Elena Vance"
-    },
-    {
-      "id": "usr_david",
-      "email": "david.c@gmail.com",
-      "name": "David Chen"
-    },
-    {
-      "id": "usr_1789492182907",
-      "email": "qtru49@gmail.com",
-      "name": "Trung Vuong"
+      "id": "usr_1790971980093_bqsp",
+      "name": "Alex",
+      "email": "alex@camp.local"
     }
   ],
+  "accounts": [],
+  "invitations": [],
   "trips": [
     {
-      "id": "trip_upcoming_1",
-      "title": "Algonquin Lakefront Multi-Site",
+      "id": "trip_1790971906612",
+      "title": "Olympic Rainforest Camp & Hike",
       "hostId": "usr_host",
-      "hostEmail": "alex.camper@gmail.com",
-      "hostName": "Alex Rivers",
-      "startDate": "2026-10-09",
-      "endDate": "2026-10-12",
-      "location": "Algonquin Provincial Park, ON",
-      "parkDetails": {
-        "name": "Algonquin Provincial Park - Lake of Two Rivers",
-        "location": "Whitney, ON (approx 3 hrs from Toronto / Ottawa)",
-        "driveDistance": "3 hrs drive",
-        "pricePerNight": "$42 / site",
-        "experienceLevel": "Intermediate",
-        "restrictions": [
-          "Strict can/bottle glass ban on waterways",
-          "Quiet hours 10 PM - 7 AM",
-          "Max 6 people & 2 vehicles per site",
-          "Fire only in designated pits"
-        ],
-        "amenities": [
-          "Comfort station with hot showers",
-          "Drinking water taps",
-          "Camp store & firewood on-site",
-          "Canoe rental at Portage Outpost"
-        ],
-        "activities": [
-          "Canoeing & Portage",
-          "Hiking Centennial Ridges Trail",
-          "Night Stargazing",
-          "Campfire Cooking"
-        ],
-        "description": "Stunning fall foliage camping with lakeside access, pristine canoe routes, and designated multi-group adjacent campsites."
-      },
-      "password": "pine-cone-2026",
-      "passwordExpiresAt": "2026-10-15",
-      "createdAt": "2026-09-10T10:00:00Z"
-    },
-    {
-      "id": "trip_past_1",
-      "title": "Bruce Peninsula Summer Solstice",
-      "hostId": "usr_host",
-      "hostEmail": "alex.camper@gmail.com",
-      "hostName": "Alex Rivers",
-      "startDate": "2025-06-20",
-      "endDate": "2025-06-23",
-      "location": "Bruce Peninsula National Park, ON",
-      "parkDetails": {
-        "name": "Cyprus Lake Campground",
-        "location": "Tobermory, ON",
-        "driveDistance": "4 hrs drive",
-        "pricePerNight": "$48 / site",
-        "experienceLevel": "Intermediate",
-        "restrictions": [
-          "Bear cache mandatory",
-          "Grotto parking permit required",
-          "Zero alcohol policy on holiday weekends"
-        ],
-        "amenities": [
-          "Flush toilets",
-          "Potable water",
-          "Firewood station"
-        ],
-        "activities": [
-          "Cliff Jumping / Swimming",
-          "Bruce Trail Hike",
-          "Grotto Exploration"
-        ],
-        "description": "Turquoise Georgian Bay waters, limestone cliffs, and shared group campfire nights."
-      },
-      "password": "bruce-trail-archive",
-      "passwordExpiresAt": "2025-07-01",
-      "createdAt": "2025-05-15T09:00:00Z"
-    },
-    {
-      "id": "trip_1789497964212",
-      "title": "Camping Trip 2026",
-      "hostId": "usr_1789492182907",
       "hostEmail": "qtru49@gmail.com",
-      "hostName": "Trung Vuong",
-      "startDate": "2026-10-09",
-      "endDate": "2026-10-12",
-      "location": "Killarney Provincial Park - George Lake Campground (Killarney, ON)",
-      "parkDetails": {
-        "name": "Killarney Provincial Park - George Lake Campground",
-        "location": "Killarney, ON",
-        "driveDistance": "approx 4 hrs 15 min drive (410 km) via Hwy 400 & Hwy 69 from Toronto, ON",
-        "pricePerNight": "$48 - $58 / night",
-        "experienceLevel": "Backcountry / Expert",
-        "restrictions": [
-          "Cans and glass containers banned in interior",
-          "Group sizes strictly monitored",
-          "Bear proofing mandatory"
-        ],
-        "amenities": [
-          "George Lake comfort station",
-          "Canoe rentals on site",
-          "Group camping loops available"
-        ],
-        "activities": [
-          "The Crack Ridge Hike",
-          "White Quartzite Peak Climbing",
-          "Lake Canoeing",
-          "Northern Lights Watching"
-        ],
-        "description": "The crown jewel of Ontario wilderness, showcasing gleaming white quartzite ridges, sapphire-blue waters, and dramatic Group of Seven landscapes."
-      },
-      "password": "camp-9h33-2026",
-      "passwordExpiresAt": "2026-10-15",
-      "createdAt": "2026-09-15T18:46:04.212Z"
+      "hostName": "Trung",
+      "startDate": "2026-10-10",
+      "endDate": "2026-10-13",
+      "location": "Olympic National Park, WA",
+      "parkDetails": null,
+      "password": "camp",
+      "passwordExpiresAt": "2026-11-01",
+      "createdAt": "2026-10-02T20:11:46.612Z",
+      "weatherAlertConfig": {
+        "autoAlertEnabled": true,
+        "lastSentAt": "2026-10-02T20:13:00.563Z",
+        "lastForecastSummary": "55°F / 47°F - Cloudy"
+      }
     }
   ],
   "tripMembers": [
     {
-      "id": "tm_1",
-      "tripId": "trip_upcoming_1",
+      "id": "tm_1790971906612_host",
+      "tripId": "trip_1790971906612",
       "userId": "usr_host",
-      "email": "alex.camper@gmail.com",
-      "name": "Alex Rivers",
-      "role": "host",
-      "joinedAt": "2026-09-10T10:00:00Z"
-    },
-    {
-      "id": "tm_2",
-      "tripId": "trip_upcoming_1",
-      "userId": "usr_sara",
-      "email": "sara.k@gmail.com",
-      "name": "Sara Kelly",
-      "role": "member",
-      "joinedAt": "2026-09-11T12:00:00Z"
-    },
-    {
-      "id": "tm_3",
-      "tripId": "trip_upcoming_1",
-      "userId": "usr_marcus",
-      "email": "marcus.t@gmail.com",
-      "name": "Marcus Thorne",
-      "role": "member",
-      "joinedAt": "2026-09-11T14:30:00Z"
-    },
-    {
-      "id": "tm_4",
-      "tripId": "trip_upcoming_1",
-      "userId": "usr_elena",
-      "email": "elena.v@gmail.com",
-      "name": "Elena Vance",
-      "role": "member",
-      "joinedAt": "2026-09-12T08:15:00Z"
-    },
-    {
-      "id": "tm_5",
-      "tripId": "trip_upcoming_1",
-      "userId": "usr_david",
-      "email": "david.c@gmail.com",
-      "name": "David Chen",
-      "role": "member",
-      "joinedAt": "2026-09-12T09:45:00Z"
-    },
-    {
-      "id": "tm_6",
-      "tripId": "trip_past_1",
-      "userId": "usr_host",
-      "email": "alex.camper@gmail.com",
-      "name": "Alex Rivers",
-      "role": "host",
-      "joinedAt": "2025-05-15T09:00:00Z"
-    },
-    {
-      "id": "tm_7",
-      "tripId": "trip_past_1",
-      "userId": "usr_sara",
-      "email": "sara.k@gmail.com",
-      "name": "Sara Kelly",
-      "role": "member",
-      "joinedAt": "2025-05-16T11:00:00Z"
-    },
-    {
-      "id": "tm_1789497964212_host",
-      "tripId": "trip_1789497964212",
-      "userId": "usr_1789492182907",
       "email": "qtru49@gmail.com",
-      "name": "Trung Vuong",
+      "name": "Trung",
       "role": "host",
-      "joinedAt": "2026-09-15T18:46:04.212Z"
+      "joinedAt": "2026-10-02T20:11:46.612Z"
+    },
+    {
+      "id": "tm_1790971980093_v0yz",
+      "tripId": "trip_1790971906612",
+      "userId": "usr_1790971980093_bqsp",
+      "email": "alex@camp.local",
+      "name": "Alex",
+      "role": "member",
+      "joinedAt": "2026-10-02T20:13:00.093Z"
     }
   ],
   "groups": [
     {
-      "id": "grp_alpha",
-      "tripId": "trip_upcoming_1",
-      "name": "Group Alpha (Lakeside Tent 14)",
-      "siteLabel": "Site 14",
-      "description": "Alex, Sara & Marcus",
-      "createdAt": "2026-09-10T10:30:00Z"
-    },
-    {
-      "id": "grp_bravo",
-      "tripId": "trip_upcoming_1",
-      "name": "Group Bravo (Pine Ridge Tent 15)",
-      "siteLabel": "Site 15",
-      "description": "Elena & David",
-      "createdAt": "2026-09-10T10:35:00Z"
-    },
-    {
-      "id": "grp_past_1",
-      "tripId": "trip_past_1",
-      "name": "Lakeshore Crew",
-      "siteLabel": "Site 22",
-      "description": "All campers",
-      "createdAt": "2025-05-15T09:30:00Z"
-    },
-    {
-      "id": "grp_1789497964212_1",
-      "tripId": "trip_1789497964212",
+      "id": "grp_1790971906612_1",
+      "tripId": "trip_1790971906612",
       "name": "Group Alpha (Host Site)",
       "siteLabel": "Site 1",
       "description": "Initial group",
-      "createdAt": "2026-09-15T18:46:04.212Z"
+      "createdAt": "2026-10-02T20:11:46.612Z"
+    },
+    {
+      "id": "grp_1790971936487",
+      "tripId": "trip_1790971906612",
+      "name": "Group Beta (Camp Chefs)",
+      "siteLabel": "Site 2",
+      "description": "",
+      "createdAt": "2026-10-02T20:12:16.487Z"
     }
   ],
   "groupMembers": [
     {
-      "id": "gm_1",
-      "groupId": "grp_alpha",
-      "tripId": "trip_upcoming_1",
+      "id": "gm_1790971906612_host",
+      "groupId": "grp_1790971906612_1",
+      "tripId": "trip_1790971906612",
       "userId": "usr_host",
-      "email": "alex.camper@gmail.com",
-      "name": "Alex Rivers"
-    },
-    {
-      "id": "gm_2",
-      "groupId": "grp_alpha",
-      "tripId": "trip_upcoming_1",
-      "userId": "usr_sara",
-      "email": "sara.k@gmail.com",
-      "name": "Sara Kelly"
-    },
-    {
-      "id": "gm_3",
-      "groupId": "grp_alpha",
-      "tripId": "trip_upcoming_1",
-      "userId": "usr_marcus",
-      "email": "marcus.t@gmail.com",
-      "name": "Marcus Thorne"
-    },
-    {
-      "id": "gm_4",
-      "groupId": "grp_bravo",
-      "tripId": "trip_upcoming_1",
-      "userId": "usr_elena",
-      "email": "elena.v@gmail.com",
-      "name": "Elena Vance"
-    },
-    {
-      "id": "gm_5",
-      "groupId": "grp_bravo",
-      "tripId": "trip_upcoming_1",
-      "userId": "usr_david",
-      "email": "david.c@gmail.com",
-      "name": "David Chen"
-    },
-    {
-      "id": "gm_6",
-      "groupId": "grp_past_1",
-      "tripId": "trip_past_1",
-      "userId": "usr_host",
-      "email": "alex.camper@gmail.com",
-      "name": "Alex Rivers"
-    },
-    {
-      "id": "gm_7",
-      "groupId": "grp_past_1",
-      "tripId": "trip_past_1",
-      "userId": "usr_sara",
-      "email": "sara.k@gmail.com",
-      "name": "Sara Kelly"
-    },
-    {
-      "id": "gm_1789497964212_host",
-      "groupId": "grp_1789497964212_1",
-      "tripId": "trip_1789497964212",
-      "userId": "usr_1789492182907",
       "email": "qtru49@gmail.com",
-      "name": "Trung Vuong"
+      "name": "Trung"
+    },
+    {
+      "id": "gm_1790971980094_ud3j",
+      "groupId": "grp_1790971936487",
+      "tripId": "trip_1790971906612",
+      "userId": "usr_1790971980093_bqsp",
+      "email": "alex@camp.local",
+      "name": "Alex"
     }
   ],
   "equipmentItems": [
     {
-      "id": "eq_1",
-      "tripId": "trip_upcoming_1",
-      "groupId": "grp_alpha",
-      "name": "6-Person Weatherproof Dome Tent",
+      "id": "eq_1790972003210_um1k",
+      "tripId": "trip_1790971906612",
+      "groupId": "grp_1790971906612_1",
+      "name": "6-Person Weatherproof Tent",
       "category": "Shelter & Sleep",
-      "assignedTo": "Alex Rivers",
+      "assignedTo": "Trung",
       "packed": true,
-      "notes": "Seam-sealed with ground tarp"
-    },
-    {
-      "id": "eq_2",
-      "tripId": "trip_upcoming_1",
-      "groupId": "grp_alpha",
-      "name": "Dual Burner Propane Camp Stove",
-      "category": "Cooking & Water",
-      "assignedTo": "Marcus Thorne",
-      "packed": false,
-      "notes": "Bring 2x 1lb propane bottles"
-    },
-    {
-      "id": "eq_3",
-      "tripId": "trip_upcoming_1",
-      "groupId": "grp_alpha",
-      "name": "Bear Vault & 50ft Hanging Cord",
-      "category": "Tools & First Aid",
-      "assignedTo": "Sara Kelly",
-      "packed": true,
-      "notes": "Mandatory for Algonquin backcountry"
-    },
-    {
-      "id": "eq_4",
-      "tripId": "trip_upcoming_1",
-      "groupId": "grp_alpha",
-      "name": "Gravity Water Filter (4L Katadyn)",
-      "category": "Cooking & Water",
-      "assignedTo": "Alex Rivers",
-      "packed": true,
-      "notes": "Spare carbon element included"
-    },
-    {
-      "id": "eq_5",
-      "tripId": "trip_upcoming_1",
-      "groupId": "grp_alpha",
-      "name": "Rechargeable LED Lantern & 2x Headlamps",
-      "category": "Lighting & Power",
-      "assignedTo": "Sara Kelly",
-      "packed": false,
-      "notes": "Charged via USB-C"
-    },
-    {
-      "id": "eq_6",
-      "tripId": "trip_upcoming_1",
-      "groupId": "grp_alpha",
-      "name": "Thermal Sleeping Pads (R-value 4.2)",
-      "category": "Shelter & Sleep",
-      "assignedTo": "Marcus Thorne",
-      "packed": false,
-      "notes": "Night temps forecast down to 4°C"
-    },
-    {
-      "id": "eq_7",
-      "tripId": "trip_upcoming_1",
-      "groupId": "grp_bravo",
-      "name": "4-Season 3-Person Backpacking Tent",
-      "category": "Shelter & Sleep",
-      "assignedTo": "Elena Vance",
-      "packed": true,
-      "notes": "Rain fly + vestibule"
-    },
-    {
-      "id": "eq_8",
-      "tripId": "trip_upcoming_1",
-      "groupId": "grp_bravo",
-      "name": "Jetboil Flash Stove + Fuel Canister",
-      "category": "Cooking & Water",
-      "assignedTo": "David Chen",
-      "packed": true,
-      "notes": "Rapid water boiling"
-    },
-    {
-      "id": "eq_9",
-      "tripId": "trip_upcoming_1",
-      "groupId": "grp_bravo",
-      "name": "First Aid Kit (wilderness level II)",
-      "category": "Tools & First Aid",
-      "assignedTo": "Elena Vance",
-      "packed": false,
-      "notes": "Includes splint, antiseptic, blister pads"
-    },
-    {
-      "id": "eq_10",
-      "tripId": "trip_upcoming_1",
-      "groupId": "grp_bravo",
-      "name": "Axe & Folding Camp Saw",
-      "category": "Tools & First Aid",
-      "assignedTo": "David Chen",
-      "packed": false,
-      "notes": "For firewood prep"
-    },
-    {
-      "id": "eq_11",
-      "tripId": "trip_past_1",
-      "groupId": "grp_past_1",
-      "name": "Summer Mesh Tent",
-      "category": "Shelter & Sleep",
-      "assignedTo": "Alex Rivers",
-      "packed": true,
-      "notes": "Completed trip"
+      "notes": "Check ground stakes",
+      "aiSuggested": false
     }
   ],
   "foodItems": [
     {
-      "id": "fd_1",
-      "tripId": "trip_upcoming_1",
-      "groupId": "grp_alpha",
+      "id": "fd_1790972026593_klls",
+      "tripId": "trip_1790971906612",
+      "groupId": "grp_1790971936487",
       "mealTime": "dinner",
       "mealType": "Dinner",
-      "title": "Friday Night Campfire Cast Iron Chili",
-      "description": "Hearty ground beef and 3-bean chili simmered in cast iron over wood embers.",
-      "ingredientsOrItems": "Ground beef/beans, diced tomatoes, chili spices, sour cream, grated cheddar, tortilla chips",
-      "cookOrBringer": "Alex & Sara",
+      "title": "Cast Iron Ribeye & Smashed Potatoes",
+      "description": "Cast iron sear over open campfire grate",
+      "ingredientsOrItems": "Ribeye steaks, baby potatoes, butter, garlic, rosemary",
+      "cookOrBringer": "Alex",
       "suggestedBy": {
-        "userId": "usr_host",
-        "name": "Alex Rivers"
+        "name": "Camper"
       },
-      "preparers": [
-        {
-          "userId": "usr_host",
-          "name": "Alex Rivers"
-        },
-        {
-          "userId": "usr_sara",
-          "name": "Sara Kelly"
-        }
-      ],
-      "ingredientBringers": [
-        {
-          "userId": "usr_marcus",
-          "name": "Marcus Thorne",
-          "items": "Grated cheddar, sour cream, tortilla chips"
-        }
-      ],
+      "preparers": [],
+      "ingredientBringers": [],
       "status": "planned",
-      "dayLabel": "Friday Night"
-    },
-    {
-      "id": "fd_2",
-      "tripId": "trip_upcoming_1",
-      "groupId": "grp_alpha",
-      "mealTime": "breakfast",
-      "mealType": "Breakfast",
-      "title": "Pour-over Coffee & Maple Bacon Skillet",
-      "description": "Fresh dark roast pour-over coffee paired with crisp thick bacon and campfire sourdough toast.",
-      "ingredientsOrItems": "Dark roast ground beans, pour-over dripper, thick-cut bacon, fresh eggs, sourdough",
-      "cookOrBringer": "Marcus Thorne",
-      "suggestedBy": {
-        "userId": "usr_marcus",
-        "name": "Marcus Thorne"
-      },
-      "preparers": [
-        {
-          "userId": "usr_marcus",
-          "name": "Marcus Thorne"
-        }
-      ],
-      "ingredientBringers": [
-        {
-          "userId": "usr_sara",
-          "name": "Sara Kelly",
-          "items": "Fresh eggs & artisanal sourdough loaf"
-        }
-      ],
-      "status": "purchased",
-      "dayLabel": "Saturday Morning"
-    },
-    {
-      "id": "fd_3",
-      "tripId": "trip_upcoming_1",
-      "groupId": "grp_alpha",
-      "mealTime": "snacks",
-      "mealType": "Snacks",
-      "title": "High-Calorie Trail Mix & Hydration Electrolytes",
-      "description": "Quick trail fuel for the Centennial Ridges day hike.",
-      "ingredientsOrItems": "Almonds, dried cranberries, dark chocolate chips, Nuun electrolyte tabs",
-      "cookOrBringer": "Sara Kelly",
-      "suggestedBy": {
-        "userId": "usr_sara",
-        "name": "Sara Kelly"
-      },
-      "preparers": [
-        {
-          "userId": "usr_sara",
-          "name": "Sara Kelly"
-        }
-      ],
-      "ingredientBringers": [
-        {
-          "userId": "usr_sara",
-          "name": "Sara Kelly",
-          "items": "Almonds, cranberries, electrolyte tabs"
-        }
-      ],
-      "status": "packed",
-      "dayLabel": "Saturday Trail Snacks"
-    },
-    {
-      "id": "fd_4",
-      "tripId": "trip_upcoming_1",
-      "groupId": "grp_bravo",
-      "mealTime": "dinner",
-      "mealType": "Dinner",
-      "title": "Saturday Dutch Oven Chicken Fajitas",
-      "description": "Sizzling spiced chicken strips with sweet bell peppers, charred onions, and fresh lime.",
-      "ingredientsOrItems": "Marinated chicken strips, bell peppers, onions, soft tortillas, salsa verde, lime",
-      "cookOrBringer": "Elena Vance",
-      "suggestedBy": {
-        "userId": "usr_elena",
-        "name": "Elena Vance"
-      },
-      "preparers": [
-        {
-          "userId": "usr_elena",
-          "name": "Elena Vance"
-        }
-      ],
-      "ingredientBringers": [
-        {
-          "userId": "usr_david",
-          "name": "David Chen",
-          "items": "Flour tortillas, salsa verde, fresh limes"
-        }
-      ],
-      "status": "planned",
-      "dayLabel": "Saturday Night"
-    },
-    {
-      "id": "fd_5",
-      "tripId": "trip_upcoming_1",
-      "groupId": "grp_bravo",
-      "mealTime": "lunch",
-      "mealType": "Lunch",
-      "title": "Portage Day Picnic Sandwiches",
-      "description": "Pre-assembled hardy baguettes that hold up in backpacks on the water.",
-      "ingredientsOrItems": "Smoked turkey, aged cheddar, apples, mustard, crusty baguettes",
-      "cookOrBringer": "David Chen",
-      "suggestedBy": {
-        "userId": "usr_david",
-        "name": "David Chen"
-      },
-      "preparers": [
-        {
-          "userId": "usr_david",
-          "name": "David Chen"
-        }
-      ],
-      "ingredientBringers": [
-        {
-          "userId": "usr_elena",
-          "name": "Elena Vance",
-          "items": "Aged cheddar & crisp local apples"
-        }
-      ],
-      "status": "purchased",
-      "dayLabel": "Saturday Lunch"
-    },
-    {
-      "id": "fd_6",
-      "tripId": "trip_past_1",
-      "groupId": "grp_past_1",
-      "mealTime": "dinner",
-      "mealType": "Dinner",
-      "title": "Campfire Sausages & Buns",
-      "description": "Smoked bratwurst grilled over maple charcoal.",
-      "ingredientsOrItems": "Bratwurst, dijon mustard, buns",
-      "cookOrBringer": "Alex Rivers",
-      "suggestedBy": {
-        "userId": "usr_host",
-        "name": "Alex Rivers"
-      },
-      "preparers": [
-        {
-          "userId": "usr_host",
-          "name": "Alex Rivers"
-        }
-      ],
-      "ingredientBringers": [
-        {
-          "userId": "usr_host",
-          "name": "Alex Rivers"
-        }
-      ],
-      "status": "packed",
-      "dayLabel": "Friday"
+      "dayLabel": "Day 1"
     }
   ],
-  "friends": [
-    {
-      "id": "fr_1",
-      "userId": "usr_host",
-      "friendEmail": "sara.k@gmail.com",
-      "friendName": "Sara Kelly",
-      "tags": [
-        "Experienced Camper",
-        "Canoeist"
-      ]
-    },
-    {
-      "id": "fr_2",
-      "userId": "usr_host",
-      "friendEmail": "marcus.t@gmail.com",
-      "friendName": "Marcus Thorne",
-      "tags": [
-        "Camp Chef",
-        "Car Camper"
-      ]
-    },
-    {
-      "id": "fr_3",
-      "userId": "usr_host",
-      "friendEmail": "elena.v@gmail.com",
-      "friendName": "Elena Vance",
-      "tags": [
-        "First Aider",
-        "Ultralight"
-      ]
-    },
-    {
-      "id": "fr_4",
-      "userId": "usr_host",
-      "friendEmail": "david.c@gmail.com",
-      "friendName": "David Chen",
-      "tags": [
-        "Photographer",
-        "Hammocker"
-      ]
-    },
-    {
-      "id": "fr_5",
-      "userId": "usr_host",
-      "friendEmail": "jordan.outdoors@gmail.com",
-      "friendName": "Jordan Miller",
-      "tags": [
-        "Backcountry Guide"
-      ]
-    }
-  ],
-  "accounts": []
+  "friends": []
 }

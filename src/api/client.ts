@@ -70,6 +70,7 @@ export async function updateTrip(tripId: string, data: {
 }
 
 export async function joinTrip(data: {
+  tripTitle?: string;
   password: string;
   userEmail?: string;
   userName?: string;
@@ -111,7 +112,7 @@ export async function assignGroupMember(tripId: string, data: {
   groupId: string;
   userEmail?: string;
   userName?: string;
-}): Promise<{ success: boolean; groupMembers: GroupMember[] }> {
+}): Promise<{ success: boolean; groupMembers: GroupMember[]; members?: TripMember[] }> {
   const res = await fetch(`/api/trips/${tripId}/assign-group`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -120,6 +121,23 @@ export async function assignGroupMember(tripId: string, data: {
   if (!res.ok) {
     const err = await res.json();
     throw new Error(err.error || 'Failed to assign member');
+  }
+  return res.json();
+}
+
+export async function addTripMember(tripId: string, data: {
+  hostUserId: string;
+  name: string;
+  email?: string;
+}): Promise<{ success: boolean; member: TripMember; members: TripMember[] }> {
+  const res = await fetch(`/api/trips/${tripId}/members`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data)
+  });
+  if (!res.ok) {
+    const err = await res.json();
+    throw new Error(err.error || 'Failed to add member to trip');
   }
   return res.json();
 }
@@ -534,6 +552,41 @@ export async function joinTripViaLink(
   };
 }
 
+export async function loginOrRegisterWithPin(data: {
+  name: string;
+  pin: string;
+}): Promise<{
+  user: User;
+  message: string;
+}> {
+  const res = await fetch('/api/auth/pin-auth', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data)
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.error || 'Failed to authenticate with Name & 4-digit PIN');
+  }
+  return res.json();
+}
+
+export async function clearAllDatabaseData(): Promise<{
+  success: boolean;
+  supabaseCleared: boolean;
+  message: string;
+}> {
+  const res = await fetch('/api/admin/clear-data', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' }
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.error || 'Failed to clear database data');
+  }
+  return res.json();
+}
+
 export async function registerAccount(data: {
   username: string;
   email: string;
@@ -651,4 +704,41 @@ export async function toggleTripWeatherAutoAlert(tripId: string, enabled: boolea
   }
   return res.json();
 }
+
+export async function fetchActiveTrip(): Promise<{
+  trip: Trip | null;
+  isPast?: boolean;
+  members?: TripMember[];
+  groups?: Group[];
+  groupMembers?: GroupMember[];
+  equipment?: EquipmentItem[];
+  food?: FoodItem[];
+}> {
+  const res = await fetch('/api/active-trip');
+  if (!res.ok) throw new Error('Failed to fetch active trip');
+  return res.json();
+}
+
+export async function updateTripGoogleSheet(
+  tripId: string,
+  data: {
+    googleSpreadsheetId?: string;
+    googleSpreadsheetUrl?: string;
+    googleSpreadsheetTitle?: string;
+    googleSpreadsheetLastSynced?: string;
+    googleSpreadsheetSyncStatus?: 'connected' | 'syncing' | 'error' | 'not_connected';
+  }
+): Promise<{ success: boolean; trip: Trip }> {
+  const res = await fetch(`/api/trips/${tripId}/google-sheet`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data)
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.error || 'Failed to update Google Sheet metadata');
+  }
+  return res.json();
+}
+
 

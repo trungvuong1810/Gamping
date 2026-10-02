@@ -22,7 +22,11 @@ export function isGrokConfigured(): boolean {
 }
 
 export function getGrokModelName(): string {
-  return process.env.GROK_MODEL || "grok-2-latest";
+  const envModel = (process.env.GROK_MODEL || process.env.XAI_MODEL || "").trim();
+  if (envModel && envModel !== "4.6" && envModel !== "grok-2-latest" && envModel !== "grok-beta" && envModel !== "grok-2" && envModel !== "grok-2-1212") {
+    return envModel;
+  }
+  return "grok-3";
 }
 
 /**
@@ -124,7 +128,7 @@ export async function recommendParksWithGrok(params: {
 You exclusively recommend real, authentic, existing public campgrounds (State Parks, Provincial Parks, National Parks, National Forests) located strictly within the user's driving distance radius from their specified departure city.
 You must always output strict, valid JSON matching the exact schema requested, with no conversational filler.`;
 
-  const userPrompt = `Find 3 real, verified public campgrounds strictly within "${distance}" of departure city "${originCity || "Seattle, WA"}".
+  const userPrompt = `Find 10 real, verified public campgrounds strictly within "${distance}" of departure city "${originCity || "Seattle, WA"}".
 
 User Constraints:
 - Origin / Departure Point: "${originCity || "Seattle, WA"}" ${coordinates ? `(GPS Lat: ${coordinates.lat}, Lng: ${coordinates.lng})` : ""}
@@ -141,7 +145,7 @@ STRICT GEOGRAPHIC REQUIREMENTS:
 2. Explicitly specify the realistic highway route and drive time in "driveDistance" (e.g. "approx 1 hr 25 min drive (68 miles via I-90 E) from ${originCity}").
 3. Tailor to multi-group coordination (group tent pads, shared campfire rings, meal shelters, clean facilities).
 
-Return a JSON array of 3 park objects with these exact keys:
+Return a JSON array of 10 park objects with these exact keys:
 - name: string (exact park and campground name)
 - location: string (city/area and state or province)
 - driveDistance: string (explicit travel time and route directly from ${originCity})

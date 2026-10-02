@@ -88,7 +88,7 @@ export const FoodListView: React.FC<FoodListViewProps> = ({
     switch (time) {
       case 'breakfast': return 'bg-amber-100 text-amber-900 border-amber-200';
       case 'lunch': return 'bg-sky-100 text-sky-900 border-sky-200';
-      case 'dinner': return 'bg-orange-100 text-orange-900 border-orange-200';
+      case 'dinner': return 'bg-[#D6B588]/20 text-neutral-900 border-[#D6B588]';
       case 'snacks': return 'bg-emerald-100 text-emerald-900 border-emerald-200';
       default: return 'bg-neutral-100 text-neutral-900 border-neutral-200';
     }
@@ -483,10 +483,10 @@ export const FoodListView: React.FC<FoodListViewProps> = ({
       <div className="space-y-3">
         
         {/* Meal Time Categories (Breakfast, Lunch, Dinner, Snacks) */}
-        <div className="flex items-center gap-1.5 overflow-x-auto pb-1 border-b border-neutral-200">
+        <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-none touch-scroll pb-1 border-b border-neutral-200">
           <button
             onClick={() => setSelectedMealTime('all')}
-            className={`px-3.5 py-2 rounded-xl text-xs font-semibold transition flex items-center gap-1.5 ${
+            className={`min-h-[44px] px-3.5 py-2 rounded-xl text-xs font-semibold transition flex items-center gap-1.5 shrink-0 ${
               selectedMealTime === 'all'
                 ? 'bg-neutral-950 text-white shadow-xs'
                 : 'bg-white text-neutral-600 hover:bg-neutral-100 border border-neutral-200'
@@ -507,7 +507,7 @@ export const FoodListView: React.FC<FoodListViewProps> = ({
               <button
                 key={time}
                 onClick={() => setSelectedMealTime(time)}
-                className={`px-3.5 py-2 rounded-xl text-xs font-semibold transition flex items-center gap-2 capitalize whitespace-nowrap ${
+                className={`min-h-[44px] px-3.5 py-2 rounded-xl text-xs font-semibold transition flex items-center gap-2 capitalize whitespace-nowrap shrink-0 ${
                   isSelected
                     ? 'bg-neutral-950 text-white shadow-xs'
                     : 'bg-white text-neutral-600 hover:bg-neutral-100 border border-neutral-200'
@@ -526,14 +526,14 @@ export const FoodListView: React.FC<FoodListViewProps> = ({
         </div>
 
         {/* Group Sub-Tabs (Cross-group visibility) */}
-        <div className="flex items-center gap-2 overflow-x-auto text-xs font-medium text-neutral-600">
-          <span className="text-[11px] text-neutral-400 uppercase tracking-wider font-semibold">
+        <div className="flex items-center gap-2 overflow-x-auto scrollbar-none touch-scroll text-xs font-medium text-neutral-600 pb-1">
+          <span className="text-[11px] text-neutral-400 uppercase tracking-wider font-semibold shrink-0">
             Campsite:
           </span>
 
           <button
             onClick={() => setSelectedGroupFilter('all')}
-            className={`px-2.5 py-1 rounded-lg transition ${
+            className={`min-h-[36px] px-3 py-1.5 rounded-lg transition whitespace-nowrap shrink-0 ${
               selectedGroupFilter === 'all'
                 ? 'bg-neutral-200 text-neutral-900 font-semibold'
                 : 'hover:bg-neutral-100 text-neutral-600'
@@ -551,7 +551,7 @@ export const FoodListView: React.FC<FoodListViewProps> = ({
               <button
                 key={g.id}
                 onClick={() => setSelectedGroupFilter(g.id)}
-                className={`px-2.5 py-1 rounded-lg transition flex items-center gap-1.5 ${
+                className={`min-h-[36px] px-3 py-1.5 rounded-lg transition flex items-center gap-1.5 whitespace-nowrap shrink-0 ${
                   isSelected
                     ? 'bg-neutral-200 text-neutral-900 font-semibold'
                     : 'hover:bg-neutral-100 text-neutral-600'
@@ -626,7 +626,7 @@ export const FoodListView: React.FC<FoodListViewProps> = ({
                           Needs Chef / Preparer
                         </span>
                       ) : hasPreparers && !hasBringers ? (
-                        <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-orange-100 text-orange-800">
+                        <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-[#D6B588]/20 text-neutral-800">
                           Needs Ingredients
                         </span>
                       ) : (

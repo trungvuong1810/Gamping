@@ -226,7 +226,7 @@ export const MealIdeasModal: React.FC<MealIdeasModalProps> = ({
                               {item.prepTime}
                             </span>
                             <span className="flex items-center gap-0.5">
-                              <Flame className="w-2.5 h-2.5 text-orange-500" />
+                              <Flame className="w-2.5 h-2.5 text-[#D6B588]" />
                               {item.cookMethod}
                             </span>
                           </div>

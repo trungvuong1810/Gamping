@@ -1,369 +1,762 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { User, Trip, TripDetailsResponse } from './types';
-import { fetchUserTrips, fetchTripDetails, deleteTrip, joinTripViaLink } from './api/client';
-import { Header } from './components/Header';
-import { EntryFork } from './components/EntryFork';
-import { HostFlow } from './components/HostFlow';
-import { JoinFlow } from './components/JoinFlow';
-import { TripView } from './components/TripView';
-import { AccountView } from './components/AccountView';
-import { AuthModal } from './components/AuthModal';
+import {
+  Trip,
+  TripMember,
+  Group,
+  EquipmentItem,
+  FoodItem,
+  PackingCategory,
+  MealTime,
+  WeatherReport
+} from './types';
+import {
+  fetchActiveTrip,
+  fetchTripDetails,
+  createTrip,
+  updateTrip,
+  updateTripGoogleSheet,
+  createGroup,
+  fetchTripWeather
+} from './api/client';
+import { GoogleSheetSyncBanner } from './components/GoogleSheetSyncBanner';
+import { CampOverviewTab } from './components/CampOverviewTab';
+import { GroupsMembersTab } from './components/GroupsMembersTab';
+import { GearChecklistTab } from './components/GearChecklistTab';
+import { CampMenuTab } from './components/CampMenuTab';
+import { WeatherTab } from './components/WeatherTab';
+import { CreateTripModal } from './components/CreateTripModal';
+import { pushTripDataToSpreadsheet } from './lib/googleSheets';
+import { getAccessToken } from './lib/googleAuth';
+import {
+  Compass,
+  Users,
+  Backpack,
+  Utensils,
+  CloudSun,
+  Plus,
+  Sheet,
+  User as UserIcon
+} from 'lucide-react';
 
-// Pre-configured test personas to easily test cross-group permissions & host controls
-const DEMO_USERS: User[] = [
-  { id: 'usr_host', email: 'alex.camper@gmail.com', name: 'Alex Rivers (Host)' },
-  { id: 'usr_sara', email: 'sara.k@gmail.com', name: 'Sara Kelly (Group Alpha)' },
-  { id: 'usr_elena', email: 'elena.v@gmail.com', name: 'Elena Vance (Group Bravo)' },
-  { id: 'usr_marcus', email: 'marcus.t@gmail.com', name: 'Marcus Thorne (Alpha Camper)' },
-  { id: 'usr_david', email: 'david.c@gmail.com', name: 'David Chen (Bravo Camper)' },
-];
+type ActiveTab = 'overview' | 'groups' | 'gear' | 'food' | 'weather';
 
 export default function App() {
-  const [currentUser, setCurrentUser] = useState<User | null>(() => {
+  // Active trip state
+  const [trip, setTrip] = useState<Trip | null>(null);
+  const [members, setMembers] = useState<TripMember[]>([]);
+  const [groups, setGroups] = useState<Group[]>([]);
+  const [equipment, setEquipment] = useState<EquipmentItem[]>([]);
+  const [food, setFood] = useState<FoodItem[]>([]);
+  const [weatherReport, setWeatherReport] = useState<WeatherReport | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+
+  // Active navigation tab
+  const [activeTab, setActiveTab] = useState<ActiveTab>('overview');
+
+  // Active camper remembered on this device
+  const [currentMember, setCurrentMember] = useState<TripMember | null>(null);
+
+  // Modals
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [showEditTripModal, setShowEditTripModal] = useState(false);
+
+  // Load initial active trip
+  const loadTripData = useCallback(async (isInitial = false) => {
+    if (isInitial) setIsLoading(true);
     try {
-      const saved = localStorage.getItem('camping_app_logged_in_user');
-      if (saved) {
-        return JSON.parse(saved);
+      const data = await fetchActiveTrip();
+      if (data && data.trip) {
+        setTrip(data.trip);
+        setMembers(data.members || []);
+        setGroups(data.groups || []);
+        setEquipment(data.equipment || []);
+        setFood(data.food || []);
+
+        // Reconcile saved camper identity for this device
+        const savedCamperId = localStorage.getItem('camping_active_camper_id');
+        const matched = (data.members || []).find((m) => m.id === savedCamperId);
+        if (matched) {
+          setCurrentMember(matched);
+        } else if (data.members && data.members.length > 0 && !currentMember) {
+          setCurrentMember(data.members[0]);
+        }
+
+        // Fetch weather for this trip
+        fetchTripWeather(data.trip.id)
+          .then((wRes) => {
+            if (wRes?.weather) {
+              setWeatherReport(wRes.weather);
+            }
+          })
+          .catch((e) => console.warn('Weather fetch notice:', e));
+      } else {
+        setTrip(null);
       }
-    } catch (e) {}
-    return null;
-  });
-
-  const [view, setView] = useState<'home' | 'host' | 'join' | 'trip' | 'account'>('home');
-  const [autoJoinNotice, setAutoJoinNotice] = useState<string | null>(null);
-
-  // Auth modal state
-  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
-  const [authModalMode, setAuthModalMode] = useState<'register' | 'login'>('register');
-  const [authModalPrompt, setAuthModalPrompt] = useState<string | null>(null);
-  const [pendingNavigation, setPendingNavigation] = useState<('home' | 'host' | 'join' | 'trip' | 'account') | null>(null);
-
-  // Trip collections for active user
-  const [activeTrips, setActiveTrips] = useState<Trip[]>([]);
-  const [pastTrips, setPastTrips] = useState<Trip[]>([]);
-  const [isLoadingTrips, setIsLoadingTrips] = useState(false);
-
-  // Selected trip state
-  const [selectedTripId, setSelectedTripId] = useState<string | null>(null);
-  const [tripDetails, setTripDetails] = useState<TripDetailsResponse | null>(null);
-  const [isLoadingTripDetails, setIsLoadingTripDetails] = useState(false);
-
-  // Load user trips
-  const loadTrips = useCallback(async () => {
-    if (!currentUser) {
-      setActiveTrips([]);
-      setPastTrips([]);
-      return;
-    }
-    setIsLoadingTrips(true);
-    try {
-      const data = await fetchUserTrips(currentUser.id, currentUser.email);
-      setActiveTrips(data.activeTrips || []);
-      setPastTrips(data.pastTrips || []);
     } catch (err) {
-      console.error('Failed to load trips:', err);
+      console.error('Failed to load active trip:', err);
     } finally {
-      setIsLoadingTrips(false);
+      if (isInitial) setIsLoading(false);
     }
-  }, [currentUser?.id, currentUser?.email]);
+  }, [currentMember]);
 
+  // Initial load
   useEffect(() => {
-    loadTrips();
-  }, [loadTrips]);
+    loadTripData(true);
+  }, []);
 
-  // Auth Modal Triggers
-  const openCreateAccount = () => {
-    setAuthModalMode('register');
-    setAuthModalPrompt(null);
-    setPendingNavigation(null);
-    setIsAuthModalOpen(true);
+  // Background real-time synchronization polling every 10 seconds across all devices
+  useEffect(() => {
+    if (!trip?.id) return;
+
+    const interval = setInterval(async () => {
+      try {
+        const details = await fetchTripDetails(trip.id);
+        if (details && details.trip) {
+          setTrip(details.trip);
+          setMembers(details.members || []);
+          setGroups(details.groups || []);
+          setEquipment(details.equipment || []);
+          setFood(details.food || []);
+        }
+      } catch (err) {
+        // Silent background poll
+      }
+    }, 10000);
+
+    return () => clearInterval(interval);
+  }, [trip?.id]);
+
+  // Select camper identity on this device
+  const handleSelectCurrentMember = (member: TripMember) => {
+    setCurrentMember(member);
+    localStorage.setItem('camping_active_camper_id', member.id);
   };
 
-  const openLogIn = (reason?: string, nextView?: 'home' | 'host' | 'join' | 'trip' | 'account') => {
-    setAuthModalMode('login');
-    setAuthModalPrompt(reason || null);
-    setPendingNavigation(nextView || null);
-    setIsAuthModalOpen(true);
-  };
-
-  const handleAuthSuccess = (user: User) => {
-    setCurrentUser(user);
+  // Helper to trigger background Google Sheet push if connected
+  const pushToGoogleSheetIfConnected = async (
+    latestTrip: Trip,
+    latestMembers: TripMember[],
+    latestGroups: Group[],
+    latestEquipment: EquipmentItem[],
+    latestFood: FoodItem[]
+  ) => {
+    if (!latestTrip.googleSpreadsheetId) return;
     try {
-      localStorage.setItem('camping_app_logged_in_user', JSON.stringify(user));
-    } catch (e) {}
-    if (pendingNavigation) {
-      setView(pendingNavigation);
-      setPendingNavigation(null);
+      const token = await getAccessToken();
+      if (token) {
+        await pushTripDataToSpreadsheet(token, latestTrip.googleSpreadsheetId, {
+          trip: latestTrip,
+          members: latestMembers,
+          groups: latestGroups,
+          equipment: latestEquipment,
+          food: latestFood,
+          weather: weatherReport ? { forecastDays: weatherReport.forecastDays } : undefined
+        });
+        updateTripGoogleSheet(latestTrip.id, {
+          googleSpreadsheetLastSynced: new Date().toISOString(),
+          googleSpreadsheetSyncStatus: 'connected'
+        }).catch(() => {});
+      }
+    } catch (err) {
+      console.warn('Background sheet sync notice:', err);
     }
   };
 
-  const handleSignOut = () => {
-    setCurrentUser(null);
-    try {
-      localStorage.removeItem('camping_app_logged_in_user');
-    } catch (e) {}
-    setActiveTrips([]);
-    setPastTrips([]);
-    setView('home');
-    setSelectedTripId(null);
-    setTripDetails(null);
+  // Handle Trip creation
+  const handleCreateTripSubmit = async (tripData: {
+    title: string;
+    location: string;
+    startDate: string;
+    endDate: string;
+    hostName: string;
+    hostEmail: string;
+    initialGroups: string[];
+  }) => {
+    const res = await createTrip({
+      title: tripData.title,
+      location: tripData.location,
+      startDate: tripData.startDate,
+      endDate: tripData.endDate,
+      hostName: tripData.hostName,
+      hostEmail: tripData.hostEmail,
+      hostId: `usr_${Date.now()}`,
+      password: 'camp'
+    });
+
+    const createdTrip = res.trip;
+    setTrip(createdTrip);
+
+    if (tripData.initialGroups.length > 1) {
+      for (let i = 1; i < tripData.initialGroups.length; i++) {
+        await createGroup(createdTrip.id, {
+          userId: createdTrip.hostId,
+          name: tripData.initialGroups[i]
+        });
+      }
+    }
+
+    await loadTripData(true);
   };
 
-  // Check URL query parameters for 1-click email invitation links
-  useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const token = params.get('token');
-    const inviteTripId = params.get('invite') || params.get('tripId');
-    const inviteEmail = params.get('email');
+  // Handle Trip edit
+  const handleEditTripSubmit = async (tripData: {
+    title: string;
+    location: string;
+    startDate: string;
+    endDate: string;
+    hostName: string;
+    hostEmail: string;
+  }) => {
+    if (!trip) return;
+    const res = await updateTrip(trip.id, {
+      userId: trip.hostId,
+      title: tripData.title,
+      location: tripData.location,
+      startDate: tripData.startDate,
+      endDate: tripData.endDate
+    });
+    setTrip(res.trip);
+    await loadTripData();
+  };
 
-    if (token) {
-      const camperEmail = (inviteEmail || (currentUser ? currentUser.email : '') || 'camper@example.com').toLowerCase();
-      const camperName = camperEmail.split('@')[0].replace(/[._]/g, ' ');
+  // Toggle equipment packed status
+  const handleTogglePacked = async (itemId: string, packed: boolean) => {
+    if (!trip) return;
+    const updated = equipment.map((e) => (e.id === itemId ? { ...e, packed } : e));
+    setEquipment(updated);
 
-      joinTripViaLink({
-        token,
-        camperEmail,
-        camperName
-      }).then((res) => {
-        window.history.replaceState({}, document.title, window.location.pathname);
-        setCurrentUser(res.camper);
-        try {
-          localStorage.setItem('camping_app_logged_in_user', JSON.stringify(res.camper));
-        } catch (e) {}
-        setAutoJoinNotice(`🎉 You automatically joined "${res.trip.title}" via your email invitation!`);
-        setSelectedTripId(res.trip.id);
-        setView('trip');
-        loadTrips();
-      }).catch((err) => {
-        console.error('Auto-join via link error:', err);
-        setAutoJoinNotice(err.message || 'Invitation link expired or already accepted.');
+    try {
+      await fetch(`/api/trips/${trip.id}/equipment/${itemId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ packed, userId: currentMember?.userId || trip.hostId })
       });
-    }
-  }, []);
-
-  // Delete trip handler
-  const handleDeleteTrip = async (tripId: string) => {
-    try {
-      await deleteTrip(tripId);
-      if (selectedTripId === tripId) {
-        setSelectedTripId(null);
-        setTripDetails(null);
-        setView('home');
-      }
-      loadTrips();
-    } catch (err: any) {
-      alert(err.message || 'Failed to delete trip.');
-    }
-  };
-
-  // Load selected trip full bundle (groups, equipment, food, members)
-  const loadTripDetails = useCallback(async (tripId: string) => {
-    setIsLoadingTripDetails(true);
-    try {
-      const details = await fetchTripDetails(tripId);
-      setTripDetails(details);
+      pushToGoogleSheetIfConnected(trip, members, groups, updated, food);
     } catch (err) {
-      console.error('Failed to load trip details:', err);
-    } finally {
-      setIsLoadingTripDetails(false);
+      console.error('Failed to toggle packed:', err);
     }
-  }, []);
-
-  useEffect(() => {
-    if (selectedTripId) {
-      loadTripDetails(selectedTripId);
-    }
-  }, [selectedTripId, loadTripDetails]);
-
-  // Handler when user selects a trip to open
-  const handleOpenTrip = (trip: Trip) => {
-    setSelectedTripId(trip.id);
-    setView('trip');
   };
 
-  // Handler when a new trip is created by the host
-  const handleTripCreated = (newTrip: Trip) => {
-    loadTrips();
-    setSelectedTripId(newTrip.id);
-    setView('trip');
-  };
+  // Add single equipment item
+  const handleAddEquipment = async (data: {
+    name: string;
+    category: PackingCategory;
+    groupId: string;
+    assignedTo?: string;
+    notes?: string;
+  }) => {
+    if (!trip) return;
+    const newItem: EquipmentItem = {
+      id: `eq_${Date.now()}`,
+      tripId: trip.id,
+      groupId: data.groupId,
+      name: data.name,
+      category: data.category,
+      assignedTo: data.assignedTo || 'Unassigned',
+      packed: false,
+      notes: data.notes
+    };
 
-  // Handler when camper joins via password gate
-  const handleTripJoined = (joinedTrip: Trip) => {
-    loadTrips();
-    setSelectedTripId(joinedTrip.id);
-    setView('trip');
-  };
+    const updated = [newItem, ...equipment];
+    setEquipment(updated);
 
-  // Handler for user persona switch
-  const handleSelectUser = (user: User) => {
-    setCurrentUser(user);
     try {
-      localStorage.setItem('camping_app_logged_in_user', JSON.stringify(user));
-    } catch (e) {}
-    if (selectedTripId) {
-      loadTripDetails(selectedTripId);
+      await fetch(`/api/trips/${trip.id}/equipment`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userId: currentMember?.userId || trip.hostId,
+          ...data
+        })
+      });
+      pushToGoogleSheetIfConnected(trip, members, groups, updated, food);
+    } catch (err) {
+      console.error('Failed to add equipment:', err);
     }
   };
 
-  const isSelectedTripPast = tripDetails
-    ? new Date(tripDetails.trip.endDate) < new Date('2026-09-01')
-    : false;
+  // Delete equipment item
+  const handleDeleteEquipment = async (itemId: string) => {
+    if (!trip) return;
+    const updated = equipment.filter((e) => e.id !== itemId);
+    setEquipment(updated);
 
+    try {
+      await fetch(`/api/trips/${trip.id}/equipment/${itemId}`, {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId: currentMember?.userId || trip.hostId })
+      });
+      pushToGoogleSheetIfConnected(trip, members, groups, updated, food);
+    } catch (err) {
+      console.error('Failed to delete equipment:', err);
+    }
+  };
+
+  // Batch add equipment from Grok 4.6
+  const handleBatchAddEquipment = async (
+    items: Array<{ name: string; category: PackingCategory; groupId: string; notes: string; aiSuggested: boolean }>
+  ) => {
+    if (!trip || items.length === 0) return;
+
+    const newItems: EquipmentItem[] = items.map((it, idx) => ({
+      id: `eq_ai_${Date.now()}_${idx}`,
+      tripId: trip.id,
+      groupId: it.groupId,
+      name: it.name,
+      category: it.category,
+      assignedTo: 'Unassigned',
+      packed: false,
+      notes: it.notes,
+      aiSuggested: true
+    }));
+
+    const updated = [...newItems, ...equipment];
+    setEquipment(updated);
+
+    try {
+      for (const item of items) {
+        await fetch(`/api/trips/${trip.id}/equipment`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            userId: currentMember?.userId || trip.hostId,
+            name: item.name,
+            category: item.category,
+            groupId: item.groupId,
+            notes: item.notes,
+            aiSuggested: true
+          })
+        });
+      }
+      pushToGoogleSheetIfConnected(trip, members, groups, updated, food);
+    } catch (err) {
+      console.error('Failed to batch add equipment:', err);
+    }
+  };
+
+  // Add meal item
+  const handleAddMeal = async (data: {
+    title: string;
+    mealTime: MealTime;
+    groupId: string;
+    ingredientsOrItems: string;
+    description: string;
+    cookOrBringer: string;
+    dayLabel: string;
+  }) => {
+    if (!trip) return;
+    const newMeal: FoodItem = {
+      id: `fd_${Date.now()}`,
+      tripId: trip.id,
+      groupId: data.groupId,
+      title: data.title,
+      mealTime: data.mealTime,
+      description: data.description,
+      ingredientsOrItems: data.ingredientsOrItems,
+      cookOrBringer: data.cookOrBringer,
+      preparers: [],
+      ingredientBringers: [],
+      status: 'planned',
+      dayLabel: data.dayLabel
+    };
+
+    const updated = [...food, newMeal];
+    setFood(updated);
+
+    try {
+      await fetch(`/api/trips/${trip.id}/food`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userId: currentMember?.userId || trip.hostId,
+          ...data
+        })
+      });
+      pushToGoogleSheetIfConnected(trip, members, groups, equipment, updated);
+    } catch (err) {
+      console.error('Failed to add meal:', err);
+    }
+  };
+
+  // Update meal status
+  const handleUpdateMealStatus = async (foodId: string, status: 'planned' | 'purchased' | 'packed') => {
+    if (!trip) return;
+    const updated = food.map((f) => (f.id === foodId ? { ...f, status } : f));
+    setFood(updated);
+
+    try {
+      await fetch(`/api/trips/${trip.id}/food/${foodId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status, userId: currentMember?.userId || trip.hostId })
+      });
+      pushToGoogleSheetIfConnected(trip, members, groups, equipment, updated);
+    } catch (err) {
+      console.error('Failed to update meal status:', err);
+    }
+  };
+
+  // Delete meal
+  const handleDeleteMeal = async (foodId: string) => {
+    if (!trip) return;
+    const updated = food.filter((f) => f.id !== foodId);
+    setFood(updated);
+
+    try {
+      await fetch(`/api/trips/${trip.id}/food/${foodId}`, {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId: currentMember?.userId || trip.hostId })
+      });
+      pushToGoogleSheetIfConnected(trip, members, groups, equipment, updated);
+    } catch (err) {
+      console.error('Failed to delete meal:', err);
+    }
+  };
+
+  // Add member to group
+  const handleAddMember = async (data: { name: string; email: string; groupId: string; role: 'host' | 'member' }) => {
+    if (!trip) return;
+    try {
+      const res = await fetch(`/api/trips/${trip.id}/members`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
+      });
+      if (res.ok) {
+        await loadTripData();
+      }
+    } catch (err) {
+      console.error('Failed to add member:', err);
+    }
+  };
+
+  // Add new group
+  const handleAddGroup = async (data: { name: string; siteLabel?: string; description?: string }) => {
+    if (!trip) return;
+    try {
+      await createGroup(trip.id, {
+        userId: trip.hostId,
+        ...data
+      });
+      await loadTripData();
+    } catch (err) {
+      console.error('Failed to add group:', err);
+    }
+  };
+
+  // Loading Screen
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-white text-black flex items-center justify-center p-4">
+        <div className="text-center space-y-3">
+          <div className="w-12 h-12 border-2 border-black bg-white flex items-center justify-center mx-auto animate-pulse">
+            <Compass className="w-6 h-6 text-black animate-spin" />
+          </div>
+          <h2 className="font-black uppercase text-sm tracking-widest text-black">Loading Camping Expedition...</h2>
+          <p className="text-xs text-black/60">Connecting with Google Spreadsheet</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Welcome Screen (if database is empty)
+  if (!trip) {
+    return (
+      <div className="min-h-screen bg-white text-black flex flex-col justify-between">
+        {/* Navigation Bar */}
+        <header className="border-b border-black px-6 py-4 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 border border-black bg-white flex items-center justify-center font-bold text-lg">
+              🏕️
+            </div>
+            <div>
+              <span className="font-black text-base tracking-tight uppercase text-black block">CAMPING SYNC</span>
+              <span className="text-[11px] text-black/70 font-semibold uppercase tracking-wider block -mt-0.5">Google Spreadsheet Real-Time Expedition Planner</span>
+            </div>
+          </div>
+        </header>
+
+        {/* Hero Section */}
+        <main className="max-w-4xl mx-auto px-6 py-16 text-center space-y-8">
+          <div className="inline-block bg-[#D6B588] text-white font-bold text-xs uppercase tracking-wider px-3.5 py-1.5 border border-black">
+            Private Camping Planner for You & Friends
+          </div>
+
+          <h1 className="text-4xl sm:text-5xl font-black text-black tracking-tight uppercase max-w-2xl mx-auto leading-tight">
+            Plan your camping trip with live Google Spreadsheet sync.
+          </h1>
+
+          <p className="text-sm sm:text-base text-black/80 max-w-xl mx-auto leading-relaxed">
+            Automatically connects to Google Sheets so whoever opens the link from any phone or computer stays in real-time sync with gear lists, group menus, and weather updates.
+          </p>
+
+          <div className="pt-4 flex items-center justify-center">
+            {/* #D6B588 box with inner white text */}
+            <button
+              type="button"
+              onClick={() => setShowCreateModal(true)}
+              className="bg-[#D6B588] hover:bg-[#c9a676] text-white font-bold text-xs uppercase tracking-wider px-8 py-3.5 border border-black transition-all cursor-pointer flex items-center gap-2 shadow-xs"
+            >
+              <Plus className="w-4 h-4" />
+              <span>Plan Camping Trip</span>
+            </button>
+          </div>
+
+          {/* Highlights */}
+          <div className="pt-12 grid grid-cols-1 sm:grid-cols-3 gap-6 text-left">
+            <div className="p-6 border border-black bg-white space-y-2">
+              <Sheet className="w-6 h-6 text-black" />
+              <h3 className="font-black uppercase text-sm text-black">Google Spreadsheet Sync</h3>
+              <p className="text-xs text-black/70 leading-relaxed">
+                Bidirectional synchronization so changes in the app or inside Google Sheets sync instantly across all devices.
+              </p>
+            </div>
+
+            <div className="p-6 border border-black bg-white space-y-2">
+              <Users className="w-6 h-6 text-black" />
+              <h3 className="font-black uppercase text-sm text-black">Grouped Gear & Menus</h3>
+              <p className="text-xs text-black/70 leading-relaxed">
+                Each group manages their own food contribution and gear list so everyone stays organized without duplicate items.
+              </p>
+            </div>
+
+            <div className="p-6 border border-black bg-white space-y-2">
+              <CloudSun className="w-6 h-6 text-black" />
+              <h3 className="font-black uppercase text-sm text-black">Google Weather & Grok AI</h3>
+              <p className="text-xs text-black/70 leading-relaxed">
+                Live campground weather forecasts and Grok 4.6 AI suggestions for gear checklists and campfire culinary recipes.
+              </p>
+            </div>
+          </div>
+        </main>
+
+        {/* Footer */}
+        <footer className="border-t border-black py-6 text-center text-xs font-semibold uppercase tracking-wider text-black/60">
+          Private Camping Expedition Planner • Synchronized with Google Sheets
+        </footer>
+
+        {/* Create Trip Modal */}
+        <CreateTripModal
+          isOpen={showCreateModal}
+          onClose={() => setShowCreateModal(false)}
+          onSubmit={handleCreateTripSubmit}
+        />
+      </div>
+    );
+  }
+
+  // Active Camping Workspace View: Monochrome Black/White with #D6B588 Box Accents
   return (
-    <div className="min-h-screen bg-white text-neutral-900 flex flex-col font-sans selection:bg-neutral-900 selection:text-white">
-      
-      {/* Top Header & Quiet Navigation */}
-      <Header
-        currentUser={currentUser}
-        isSignedIn={Boolean(currentUser)}
-        onSelectUser={handleSelectUser}
-        availableUsers={DEMO_USERS}
-        currentTrip={tripDetails?.trip}
-        currentView={view}
-        onNavigate={(v) => {
-          if (v === 'account' && !currentUser) {
-            openLogIn('Please sign in or create an account to view your Account & History.', 'account');
-            return;
-          }
-          if (v === 'host' && !currentUser) {
-            openLogIn('Please sign in or create an account to host a trip.', 'host');
-            return;
-          }
-          setView(v);
-          if (v === 'home') {
-            setSelectedTripId(null);
-            setTripDetails(null);
-          }
+    <div className="min-h-screen bg-white text-black flex flex-col font-sans">
+      {/* Top Navbar */}
+      <header className="bg-white border-b-2 border-black sticky top-0 z-40">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex items-center justify-between h-18">
+            {/* Logo & Trip Title */}
+            <div className="flex items-center gap-3.5">
+              <div className="w-10 h-10 border border-black bg-white flex items-center justify-center font-bold text-lg">
+                🏕️
+              </div>
+              <div className="min-w-0">
+                <div className="flex items-center gap-2">
+                  <h1 className="font-black text-base sm:text-lg tracking-tight uppercase text-black truncate max-w-[200px] sm:max-w-xs">
+                    {trip.title}
+                  </h1>
+                  <span className="bg-[#D6B588] text-white font-bold text-[10px] px-2 py-0.5 border border-black uppercase tracking-wider">
+                    Active Trip
+                  </span>
+                </div>
+                <div className="text-xs font-medium text-black/70 truncate mt-0.5">
+                  {trip.location}
+                </div>
+              </div>
+            </div>
+
+            {/* Right: Camper Profile (no Firebase button) */}
+            <div className="flex items-center gap-3">
+              {currentMember && (
+                <div className="flex items-center gap-2 px-3.5 py-1.5 border border-black bg-white text-xs">
+                  <UserIcon className="w-3.5 h-3.5 text-black" />
+                  <span className="text-black font-bold uppercase tracking-wider">{currentMember.name}</span>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* Navigation Tabs Bar: White background, black borders, #D6B588 boxes for active tab */}
+        <div className="border-t border-black bg-white">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <nav className="flex space-x-2 sm:space-x-3 overflow-x-auto touch-scroll py-2.5">
+              <button
+                type="button"
+                onClick={() => setActiveTab('overview')}
+                className={`px-4 py-2 text-xs font-bold uppercase tracking-wider flex items-center gap-2 transition-all shrink-0 cursor-pointer border border-black ${
+                  activeTab === 'overview'
+                    ? 'bg-[#D6B588] text-white shadow-xs'
+                    : 'bg-white text-black hover:bg-neutral-100'
+                }`}
+              >
+                <Compass className="w-4 h-4" />
+                <span>Trip Hub & Sync</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setActiveTab('groups')}
+                className={`px-4 py-2 text-xs font-bold uppercase tracking-wider flex items-center gap-2 transition-all shrink-0 cursor-pointer border border-black ${
+                  activeTab === 'groups'
+                    ? 'bg-[#D6B588] text-white shadow-xs'
+                    : 'bg-white text-black hover:bg-neutral-100'
+                }`}
+              >
+                <Users className="w-4 h-4" />
+                <span>Groups & Campers ({members.length})</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setActiveTab('gear')}
+                className={`px-4 py-2 text-xs font-bold uppercase tracking-wider flex items-center gap-2 transition-all shrink-0 cursor-pointer border border-black ${
+                  activeTab === 'gear'
+                    ? 'bg-[#D6B588] text-white shadow-xs'
+                    : 'bg-white text-black hover:bg-neutral-100'
+                }`}
+              >
+                <Backpack className="w-4 h-4" />
+                <span>Gear Checklist ({equipment.length})</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setActiveTab('food')}
+                className={`px-4 py-2 text-xs font-bold uppercase tracking-wider flex items-center gap-2 transition-all shrink-0 cursor-pointer border border-black ${
+                  activeTab === 'food'
+                    ? 'bg-[#D6B588] text-white shadow-xs'
+                    : 'bg-white text-black hover:bg-neutral-100'
+                }`}
+              >
+                <Utensils className="w-4 h-4" />
+                <span>Camp Menu ({food.length})</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setActiveTab('weather')}
+                className={`px-4 py-2 text-xs font-bold uppercase tracking-wider flex items-center gap-2 transition-all shrink-0 cursor-pointer border border-black ${
+                  activeTab === 'weather'
+                    ? 'bg-[#D6B588] text-white shadow-xs'
+                    : 'bg-white text-black hover:bg-neutral-100'
+                }`}
+              >
+                <CloudSun className="w-4 h-4" />
+                <span>Google Weather</span>
+              </button>
+            </nav>
+          </div>
+        </div>
+      </header>
+
+      {/* Real-time Google Spreadsheet Sync Banner */}
+      <GoogleSheetSyncBanner
+        trip={trip}
+        members={members}
+        groups={groups}
+        equipment={equipment}
+        food={food}
+        forecastDays={weatherReport?.forecastDays}
+        onTripUpdated={(updated) => setTrip(updated)}
+        onRefreshData={() => loadTripData()}
+        onGearPulled={(items) => {
+          const updated = equipment.map((eq) => {
+            const match = items.find((it) => it.name.toLowerCase() === eq.name.toLowerCase());
+            return match ? { ...eq, packed: match.packed } : eq;
+          });
+          setEquipment(updated);
         }}
-        onOpenCreateAccount={openCreateAccount}
-        onOpenLogIn={(reason) => openLogIn(reason)}
-        onSignOut={handleSignOut}
       />
 
-      {/* Auto-join banner notification */}
-      {autoJoinNotice && (
-        <div className="bg-neutral-900 text-white py-2 px-4 text-center text-xs font-medium flex items-center justify-center gap-3">
-          <span>{autoJoinNotice}</span>
-          <button
-            onClick={() => setAutoJoinNotice(null)}
-            className="text-neutral-400 hover:text-white font-bold ml-2 text-sm"
-          >
-            ×
-          </button>
-        </div>
-      )}
+      {/* Main Tab Content */}
+      <main className="max-w-7xl mx-auto px-4 py-8 sm:px-6 lg:px-8 flex-1 w-full bg-white">
+        {activeTab === 'overview' && (
+          <CampOverviewTab
+            trip={trip}
+            members={members}
+            groups={groups}
+            equipment={equipment}
+            food={food}
+            weather={weatherReport}
+            onNavigateTab={(tab) => setActiveTab(tab)}
+            onEditTrip={() => setShowEditTripModal(true)}
+          />
+        )}
 
-      {/* Main View Area */}
-      <main className="flex-1">
-        {view === 'home' && (
-          <EntryFork
-            currentUser={currentUser}
-            isSignedIn={Boolean(currentUser)}
-            activeTrips={activeTrips}
-            pastTrips={pastTrips}
-            onSelectTrip={handleOpenTrip}
-            onNavigate={(v) => {
-              if (v === 'account' && !currentUser) {
-                openLogIn('Please sign in or create an account to view your Account & History.', 'account');
-                return;
+        {activeTab === 'groups' && (
+          <GroupsMembersTab
+            trip={trip}
+            groups={groups}
+            members={members}
+            currentMember={currentMember}
+            onSelectCurrentMember={handleSelectCurrentMember}
+            onAddMember={handleAddMember}
+            onAddGroup={handleAddGroup}
+            onRemoveMember={async (mId) => {
+              await fetch(`/api/trips/${trip.id}/members/${mId}`, { method: 'DELETE' });
+              await loadTripData();
+            }}
+          />
+        )}
+
+        {activeTab === 'gear' && (
+          <GearChecklistTab
+            trip={trip}
+            groups={groups}
+            members={members}
+            equipment={equipment}
+            currentMember={currentMember}
+            onTogglePacked={handleTogglePacked}
+            onAddItem={handleAddEquipment}
+            onDeleteItem={handleDeleteEquipment}
+            onBatchAddItems={handleBatchAddEquipment}
+          />
+        )}
+
+        {activeTab === 'food' && (
+          <CampMenuTab
+            trip={trip}
+            groups={groups}
+            members={members}
+            food={food}
+            currentMember={currentMember}
+            onAddMeal={handleAddMeal}
+            onUpdateMealStatus={handleUpdateMealStatus}
+            onDeleteMeal={handleDeleteMeal}
+          />
+        )}
+
+        {activeTab === 'weather' && (
+          <WeatherTab
+            trip={trip}
+            weatherReport={weatherReport}
+            onRefreshWeather={async () => {
+              if (trip) {
+                const res = await fetchTripWeather(trip.id);
+                if (res?.weather) setWeatherReport(res.weather);
               }
-              if (v === 'host' && !currentUser) {
-                openLogIn('Please sign in or create an account to host a trip.', 'host');
-                return;
-              }
-              setView(v);
-            }}
-            onOpenCreateAccount={openCreateAccount}
-            onOpenLogIn={(reason) => openLogIn(reason)}
-            onDeleteTrip={handleDeleteTrip}
-          />
-        )}
-
-        {view === 'host' && (
-          <HostFlow
-            currentUser={currentUser || DEMO_USERS[0]}
-            onTripCreated={handleTripCreated}
-            onCancel={() => setView('home')}
-            activeTrips={activeTrips}
-            onDeleteTrip={handleDeleteTrip}
-          />
-        )}
-
-        {view === 'join' && (
-          <JoinFlow
-            currentUser={currentUser || DEMO_USERS[0]}
-            onJoinedTrip={handleTripJoined}
-            onCancel={() => setView('home')}
-          />
-        )}
-
-        {view === 'trip' && tripDetails && (
-          <TripView
-            trip={tripDetails.trip}
-            currentUser={currentUser || { id: 'usr_guest', email: 'guest@camp.com', name: 'Guest Camper' }}
-            members={tripDetails.members}
-            groups={tripDetails.groups}
-            groupMembers={tripDetails.groupMembers}
-            equipment={tripDetails.equipment}
-            food={tripDetails.food}
-            isPast={isSelectedTripPast}
-            onRefreshTrip={() => {
-              if (selectedTripId) loadTripDetails(selectedTripId);
-              loadTrips();
-            }}
-            onBack={() => {
-              setView('home');
-              setSelectedTripId(null);
-              setTripDetails(null);
-            }}
-            onDeleteTrip={handleDeleteTrip}
-          />
-        )}
-
-        {view === 'trip' && !tripDetails && isLoadingTripDetails && (
-          <div className="max-w-2xl mx-auto py-24 text-center">
-            <div className="inline-block animate-spin w-6 h-6 border-2 border-neutral-950 border-t-transparent rounded-full mb-3"></div>
-            <div className="text-xs font-medium text-neutral-600">Retrieving trip coordination state...</div>
-          </div>
-        )}
-
-        {view === 'account' && (
-          <AccountView
-            currentUser={currentUser}
-            activeTrips={activeTrips}
-            pastTrips={pastTrips}
-            onSelectTrip={handleOpenTrip}
-            onBack={() => setView('home')}
-            onUserLoggedIn={(newUser) => {
-              handleAuthSuccess(newUser);
-              loadTrips();
             }}
           />
         )}
       </main>
 
-      {/* Create Account & Log In Modal */}
-      <AuthModal
-        isOpen={isAuthModalOpen}
-        initialMode={authModalMode}
-        promptReason={authModalPrompt}
-        onClose={() => {
-          setIsAuthModalOpen(false);
-          setPendingNavigation(null);
-        }}
-        onSuccess={handleAuthSuccess}
+      {/* Edit Trip Modal */}
+      <CreateTripModal
+        isOpen={showEditTripModal}
+        onClose={() => setShowEditTripModal(false)}
+        onSubmit={handleEditTripSubmit}
+        initialTrip={trip}
       />
-
-      {/* Quiet Footer */}
-      <footer className="border-t border-neutral-100 py-6 text-center text-xs text-neutral-400">
-        <div className="max-w-5xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-2">
-          <span>GAMPING • Multi-Group Trip Coordination</span>
-          <span className="font-mono text-[11px]">Grok 4.6 intelligence • Group-scoped write • Trip-wide read</span>
-        </div>
-      </footer>
-
     </div>
   );
 }
-

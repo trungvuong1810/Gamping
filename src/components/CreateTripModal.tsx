@@ -88,7 +88,7 @@ export const CreateTripModal: React.FC<CreateTripModalProps> = ({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-2xs">
-      <div className="bg-white border-2 border-black max-w-lg w-full p-6 text-black max-h-[90vh] flex flex-col animate-slide-up space-y-4">
+      <div className="bg-white border-2 border-black max-w-lg w-full p-6 text-black max-h-[90dvh] flex flex-col animate-slide-up space-y-4">
         {/* Header */}
         <div className="flex items-center justify-between pb-3 border-b border-black">
           <div>

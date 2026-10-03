@@ -189,7 +189,7 @@ export const CampMenuTab: React.FC<CampMenuTabProps> = ({
                     setNewDayLabel(day);
                     setShowAddModal(true);
                   }}
-                  className="text-xs font-bold text-black hover:underline uppercase flex items-center gap-1 cursor-pointer"
+                  className="tap-target text-xs font-bold text-black hover:underline uppercase flex items-center gap-1 cursor-pointer"
                 >
                   <Plus className="w-3.5 h-3.5" />
                   Add to {day}
@@ -299,7 +299,7 @@ export const CampMenuTab: React.FC<CampMenuTabProps> = ({
       {/* Add Meal Modal */}
       {showAddModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-2xs">
-          <div className="bg-white border-2 border-black max-w-md w-full p-6 text-black space-y-4 animate-slide-up">
+          <div className="bg-white border-2 border-black max-w-md w-full p-6 text-black space-y-4 animate-slide-up max-h-[90dvh] overflow-y-auto">
             <h3 className="font-black text-black text-base uppercase tracking-tight">Add Meal Contribution</h3>
 
             <form onSubmit={handleCreateMeal} className="space-y-3">

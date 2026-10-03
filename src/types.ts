@@ -78,6 +78,7 @@ export interface TripMember {
   name: string;
   role: 'host' | 'member';
   joinedAt: string;
+  groupId?: string;
 }
 
 export interface Group {

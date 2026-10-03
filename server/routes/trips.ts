@@ -3,7 +3,7 @@ import { PORT } from "../config.js";
 import { Resend } from "resend";
 import { supabaseServer, rowToTrip, rowToMember, rowToGroup, rowToGroupMember, rowToEquipment, rowToFood, supabaseUpsertTrip, supabaseUpsertTripMember, supabaseUpsertGroup, supabaseUpsertGroupMember } from "../supabase.js";
 import { sendResendEmailWithFallback, sendInvitationEmail } from "../email.js";
-import { db, saveDb, isTripPast } from "../storage.js";
+import { db, saveDb, isTripPast, withGroupIds } from "../storage.js";
 import type { Trip, TripMember, Group, GroupMember } from "../../src/types.js";
 
 export const router = express.Router();
@@ -75,7 +75,7 @@ router.get("/api/active-trip", async (req, res) => {
   }
 
   const id = activeTrip.id;
-  const members = db.tripMembers.filter(tm => tm.tripId === id);
+  const members = withGroupIds(db.tripMembers.filter(tm => tm.tripId === id));
   const groups = db.groups.filter(g => g.tripId === id);
   const groupMembers = db.groupMembers.filter(gm => gm.tripId === id);
   const equipment = db.equipmentItems.filter(e => e.tripId === id);
@@ -140,7 +140,7 @@ router.get("/api/trips/:id", async (req, res) => {
     return res.status(404).json({ error: "Trip not found" });
   }
 
-  const members = db.tripMembers.filter(tm => tm.tripId === id);
+  const members = withGroupIds(db.tripMembers.filter(tm => tm.tripId === id));
   const groups = db.groups.filter(g => g.tripId === id);
   const groupMembers = db.groupMembers.filter(gm => gm.tripId === id);
   const equipment = db.equipmentItems.filter(e => e.tripId === id);

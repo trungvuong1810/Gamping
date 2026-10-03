@@ -192,3 +192,24 @@ export function isTripPast(trip: { endDate: string }): boolean {
   const today = new Date().toISOString().split("T")[0];
   return trip.endDate < today;
 }
+
+// Turn a free-text cook field ("Kim & Jinny", "Kevin, Chris") into preparer entries
+export function cookToPreparers(cook?: string): Array<{ userId: string; name: string }> {
+  if (!cook) return [];
+  return cook
+    .split(/&|,|\band\b/i)
+    .map(n => n.trim())
+    .filter(n => n.length > 0)
+    .map(name => {
+      const member = db.tripMembers.find(m => m.name.toLowerCase() === name.toLowerCase());
+      return { userId: member?.userId || `usr_${name.toLowerCase().replace(/\s+/g, "_")}`, name };
+    });
+}
+
+// Attach each camper's group (stored separately in groupMembers) so the UI can list names per group
+export function withGroupIds<T extends { userId: string; tripId: string }>(members: T[]): Array<T & { groupId?: string }> {
+  return members.map(m => {
+    const gm = db.groupMembers.find(g => g.tripId === m.tripId && g.userId === m.userId);
+    return gm ? { ...m, groupId: gm.groupId } : { ...m };
+  });
+}

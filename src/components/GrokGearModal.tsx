@@ -10,6 +10,8 @@ interface GrokGearModalProps {
   endDate?: string;
   groups: Group[];
   activeGroupId?: string;
+  groupSize?: number;
+  existingItems?: string[];
   onAddItems: (items: Array<{ name: string; category: PackingCategory; groupId: string; notes: string; aiSuggested: boolean }>) => void;
 }
 
@@ -29,6 +31,8 @@ export const GrokGearModal: React.FC<GrokGearModalProps> = ({
   endDate,
   groups,
   activeGroupId,
+  groupSize,
+  existingItems = [],
   onAddItems,
 }) => {
   const [selectedGroup, setSelectedGroup] = useState<string>(activeGroupId || groups[0]?.id || '');
@@ -72,6 +76,9 @@ export const GrokGearModal: React.FC<GrokGearModalProps> = ({
           endDate: endDate || '2026-07-04',
           activities,
           groupName: groups.find(g => g.id === selectedGroup)?.name || 'Camp Group',
+          season,
+          groupSize,
+          existingItems,
           notes: customNote
         })
       });
@@ -212,6 +219,20 @@ export const GrokGearModal: React.FC<GrokGearModalProps> = ({
                 );
               })}
             </div>
+          </div>
+
+          {/* Special requests */}
+          <div>
+            <label className="block text-xs font-bold uppercase tracking-wider text-black mb-1">
+              Anything specific? (optional)
+            </label>
+            <input
+              type="text"
+              value={customNote}
+              onChange={(e) => setCustomNote(e.target.value)}
+              placeholder="e.g. bringing a dog, canoe day trip, kids under 5, cold nights"
+              className="w-full text-xs px-3 py-2 bg-white border border-black focus:outline-hidden font-medium"
+            />
           </div>
 
           {/* Generate Button */}

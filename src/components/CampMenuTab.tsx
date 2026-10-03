@@ -434,6 +434,8 @@ export const CampMenuTab: React.FC<CampMenuTabProps> = ({
         destination={trip.location || 'Campground'}
         groups={groups}
         daysCount={diffDays}
+        defaultGroupSize={members.length || undefined}
+        existingMeals={food.map(f => f.title)}
         onAddMeal={onAddMeal}
       />
     </div>

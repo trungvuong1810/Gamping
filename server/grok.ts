@@ -21,12 +21,29 @@ export function isGrokConfigured(): boolean {
   return Boolean(getGrokApiKey());
 }
 
+// Current xAI flagship. Override with GROK_MODEL; retired names fall back to this.
+export const DEFAULT_GROK_MODEL = "grok-4.7";
+const FALLBACK_GROK_MODEL = "grok-3";
+const RETIRED_MODELS = new Set(["4.6", "grok-beta", "grok-2", "grok-2-latest", "grok-2-1212"]);
+
 export function getGrokModelName(): string {
   const envModel = (process.env.GROK_MODEL || process.env.XAI_MODEL || "").trim();
-  if (envModel && envModel !== "4.6" && envModel !== "grok-2-latest" && envModel !== "grok-beta" && envModel !== "grok-2" && envModel !== "grok-2-1212") {
-    return envModel;
+  if (envModel && !RETIRED_MODELS.has(envModel)) return envModel;
+  return DEFAULT_GROK_MODEL;
+}
+
+// Grok sometimes wraps the list in an object ({"meals": [...]}); return the first array found.
+function extractArray(data: any): any[] | null {
+  if (Array.isArray(data)) return data;
+  if (data && typeof data === "object") {
+    for (const v of Object.values(data)) if (Array.isArray(v)) return v;
   }
-  return "grok-3";
+  return null;
+}
+
+function formatList(label: string, items?: string[], max = 60): string {
+  const clean = (items || []).map(s => (s || "").trim()).filter(Boolean).slice(0, max);
+  return clean.length ? `- ${label}: ${clean.join("; ")}` : "";
 }
 
 /**
@@ -46,22 +63,31 @@ export async function callGrokAi<T = any>(params: GrokCallParams): Promise<{ suc
   }
 
   try {
-    const response = await fetch("https://api.x.ai/v1/chat/completions", {
+    const send = (modelName: string) => fetch("https://api.x.ai/v1/chat/completions", {
       method: "POST",
       headers: {
         "Authorization": `Bearer ${apiKey}`,
         "Content-Type": "application/json"
       },
       body: JSON.stringify({
-        model: model,
+        model: modelName,
         messages: [
           { role: "system", content: params.systemPrompt },
           { role: "user", content: params.userPrompt }
         ],
         temperature: params.temperature ?? 0.3,
-        max_tokens: params.maxTokens ?? 3000
+        max_tokens: params.maxTokens ?? 6000
       })
     });
+
+    let usedModel = model;
+    let response = await send(model);
+    // If the configured model is unavailable on this key, retry once with an older model
+    if (!response.ok && (response.status === 400 || response.status === 403 || response.status === 404) && model !== FALLBACK_GROK_MODEL) {
+      console.warn(`[Grok] Model "${model}" failed (${response.status}); retrying with ${FALLBACK_GROK_MODEL}`);
+      usedModel = FALLBACK_GROK_MODEL;
+      response = await send(FALLBACK_GROK_MODEL);
+    }
 
     if (!response.ok) {
       const errText = await response.text();
@@ -69,7 +95,7 @@ export async function callGrokAi<T = any>(params: GrokCallParams): Promise<{ suc
       return {
         success: false,
         error: `Grok API error (${response.status}): ${errText}`,
-        modelUsed: model
+        modelUsed: usedModel
       };
     }
 
@@ -88,9 +114,9 @@ export async function callGrokAi<T = any>(params: GrokCallParams): Promise<{ suc
       const parsed = JSON.parse(cleaned);
       return {
         success: true,
-        data: parsed as T,
+        data: (extractArray(parsed) ?? parsed) as T,
         rawText: content,
-        modelUsed: getGrokModelName()
+        modelUsed: usedModel
       };
     } catch (parseErr) {
       console.warn("[Grok API] Could not parse JSON response:", cleaned);
@@ -98,7 +124,7 @@ export async function callGrokAi<T = any>(params: GrokCallParams): Promise<{ suc
         success: false,
         rawText: content,
         error: "Failed to parse JSON response from Grok",
-        modelUsed: getGrokModelName()
+        modelUsed: usedModel
       };
     }
   } catch (netErr: any) {
@@ -220,26 +246,37 @@ export async function generateEquipmentSuggestionsWithGrok(params: {
   endDate?: string;
   activities?: string[];
   groupName?: string;
+  season?: string;
+  groupSize?: number;
+  notes?: string;
+  existingItems?: string[];
+  weatherSummary?: string;
 }) {
-  const { location, startDate, endDate, activities, groupName } = params;
+  const { location, startDate, endDate, activities, groupName, season, groupSize, notes, existingItems, weatherSummary } = params;
   const month = startDate ? new Date(startDate).toLocaleString('default', { month: 'long' }) : "Seasonable";
 
-  const systemPrompt = `You are Grok, the camping equipment intelligence engine. Generate smart, essential equipment suggestions for group camping.`;
-  const userPrompt = `Context:
-- Destination: ${location || "Wilderness Campground"}
-- Dates: ${startDate || "Upcoming"} to ${endDate || "Upcoming"} (${month})
-- Planned Activities: ${activities ? activities.join(", ") : "Hiking, campfire cooking"}
-- Group: ${groupName || "Campers"}
+  const systemPrompt = `You are Grok, an experienced camping guide helping a group pack. Suggest specific, practical gear (brand-agnostic) that fits the exact destination, season and activities. Avoid generic filler. Reply with JSON only.`;
+  const userPrompt = [
+    "Context:",
+    `- Destination: ${location || "Wilderness Campground"}`,
+    `- Dates: ${startDate || "Upcoming"} to ${endDate || "Upcoming"} (${month}${season ? `, ${season}` : ""})`,
+    `- Group: ${groupName || "Campers"}${groupSize ? ` (${groupSize} people)` : ""}`,
+    `- Planned activities: ${activities && activities.length ? activities.join(", ") : "Hiking, campfire cooking"}`,
+    weatherSummary ? `- Forecast: ${weatherSummary}` : "",
+    notes ? `- Special requests from the group: ${notes}` : "",
+    formatList("Already on the gear list (do NOT suggest these or near-duplicates)", existingItems),
+    "",
+    "Suggest 10 to 15 items the group is still missing. Mix essentials with a few less obvious but genuinely useful items for this specific trip.",
+    "Return a JSON array. Each item:",
+    "- name: string (specific, e.g. \"Closed-cell foam sit pads\" rather than \"Seating\")",
+    "- category: one of ['Shelter & Sleep', 'Cooking & Water', 'Lighting & Power', 'Weather & Layers', 'Tools & First Aid', 'General']",
+    "- notes: string (one sentence on why it matters for this trip)",
+    "- defaultPacked: false",
+  ].filter(Boolean).join("\n");
 
-Provide a JSON array of 8 to 12 items. Each item:
-- name: string
-- category: one of ['Shelter & Sleep', 'Cooking & Water', 'Lighting & Power', 'Weather & Layers', 'Tools & First Aid', 'General']
-- notes: string (practical advice citing climate/season)
-- defaultPacked: false`;
-
-  const grokRes = await callGrokAi({ systemPrompt, userPrompt, temperature: 0.3 });
+  const grokRes = await callGrokAi({ systemPrompt, userPrompt, temperature: 0.9 });
   if (grokRes.success && Array.isArray(grokRes.data) && grokRes.data.length > 0) {
-    return { suggestions: grokRes.data, source: getGrokModelName() };
+    return { suggestions: grokRes.data, source: grokRes.modelUsed };
   }
 
   // Curated Fallback
@@ -404,27 +441,34 @@ export async function generateMealSuggestionsWithGrok(params: {
   season?: string;
   groupSize?: number;
   activities?: string[];
+  preferences?: string;
+  existingMeals?: string[];
+  daysCount?: number;
 }) {
-  const { destination, season, groupSize, activities } = params;
+  const { destination, season, groupSize, activities, preferences, existingMeals, daysCount } = params;
   const destName = destination || "Campground";
   const numCampers = groupSize || 6;
 
-  const systemPrompt = `You are Grok, the dedicated camping culinary and outdoor meal planning engine. Generate appetizing, realistic group camp meals categorized into breakfast, lunch, dinner, and snacks.`;
+  const systemPrompt = `You are Grok, a creative camp chef. Suggest varied, realistic group meals that can be cooked at a campsite (camp stove, cast iron, campfire, cooler prep). Draw from many cuisines unless the group asks otherwise, and avoid clichés like plain oatmeal, hot dogs or basic chili unless requested. Reply with JSON only.`;
+  const userPrompt = [
+    `Plan meal ideas for ${numCampers} campers at ${destName} during ${season || "Summer"}${daysCount ? ` on a ${daysCount}-day trip` : ""}.`,
+    activities && activities.length ? `Activities: ${activities.join(", ")}.` : "",
+    preferences ? `Group preferences / dietary needs (follow these closely): ${preferences}` : "",
+    formatList("Already planned (do NOT repeat these or close variations)", existingMeals),
+    "",
+    "Give 10 ideas: 3 breakfast, 2 lunch, 3 dinner, 2 snacks. Make each one distinct in cuisine, cooking method or main ingredient.",
+    "Return a JSON array of objects with:",
+    "- mealTime: strictly one of ['breakfast', 'lunch', 'dinner', 'snacks']",
+    "- title: string (dish name)",
+    "- description: string (one or two sentences, including any make-ahead tip)",
+    `- ingredients: string (comma-separated key ingredients with rough quantities for ${numCampers})`,
+    "- prepTime: string (e.g. \"25 mins\")",
+    "- cookMethod: string (e.g. \"Cast iron over campfire\", \"2-burner stove\", \"No-cook\")",
+  ].filter(Boolean).join("\n");
 
-  const userPrompt = `Generate 8 camp meal suggestions for ${numCampers} campers at ${destName} during ${season || "Summer"}.
-(2 breakfast, 2 lunch, 2 dinner, 2 snacks).
-
-Format as a strict JSON array of 8 objects with:
-- mealTime: strictly one of ['breakfast', 'lunch', 'dinner', 'snacks']
-- title: string (dish name)
-- description: string (brief description)
-- ingredients: string (comma-separated key ingredients)
-- prepTime: string (e.g. "15 mins", "25 mins")
-- cookMethod: string (e.g. "Campfire Skillet", "2-Burner Stove", "No-Cook / Trail Pack")`;
-
-  const grokRes = await callGrokAi({ systemPrompt, userPrompt, temperature: 0.3 });
+  const grokRes = await callGrokAi({ systemPrompt, userPrompt, temperature: 0.9 });
   if (grokRes.success && Array.isArray(grokRes.data) && grokRes.data.length > 0) {
-    return { meals: grokRes.data, source: getGrokModelName() };
+    return { meals: grokRes.data, source: grokRes.modelUsed };
   }
 
   // High quality curated meal ideas

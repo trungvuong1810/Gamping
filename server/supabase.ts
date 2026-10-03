@@ -353,6 +353,15 @@ export async function supabaseUpsertGroupMember(gm: any) {
   }
 }
 
+export async function supabaseDeleteTripMember(memberId: string) {
+  if (!supabaseServer) return;
+  try {
+    await supabaseServer.from("trip_members").delete().eq("id", memberId);
+  } catch (err: any) {
+    console.warn("[Supabase Autosave] Error deleting trip member:", err?.message);
+  }
+}
+
 export async function supabaseDeleteGroupMember(tripId: string, userId: string) {
   if (!supabaseServer) return;
   try {

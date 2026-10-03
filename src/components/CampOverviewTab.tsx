@@ -96,7 +96,7 @@ export const CampOverviewTab: React.FC<CampOverviewTabProps> = ({
                 <MapPin className="w-4 h-4 text-black" />
                 <span>{trip.location || 'Camping Grounds'}</span>
               </div>
-              <span>•</span>
+              <span className="hidden sm:inline">•</span>
               <div className="flex items-center gap-1.5">
                 <Calendar className="w-4 h-4 text-black" />
                 <span>{formatFriendlyDate(trip.startDate)} to {formatFriendlyDate(trip.endDate)} ({diffDays} Days)</span>

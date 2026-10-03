@@ -1,5 +1,5 @@
 import express from "express";
-import { supabaseServer, supabaseUpsertTripMember, supabaseUpsertGroup, supabaseUpsertGroupMember, supabaseDeleteGroupMember } from "../supabase.js";
+import { supabaseServer, supabaseUpsertTripMember, supabaseUpsertGroup, supabaseUpsertGroupMember, supabaseDeleteGroupMember, supabaseDeleteTripMember } from "../supabase.js";
 import { db, saveDb, isTripPast } from "../storage.js";
 import type { Trip, Group, GroupMember } from "../../src/types.js";
 
@@ -8,6 +8,30 @@ export const router = express.Router();
 // ==========================================
 // GROUP ASSIGN (Host-only write)
 // ==========================================
+
+// Remove a camper from the trip (the host can't be removed)
+router.delete("/api/trips/:id/members/:memberId", async (req, res) => {
+  const { id, memberId } = req.params;
+  const trip = db.trips.find(t => t.id === id);
+  if (!trip) return res.status(404).json({ error: "Trip not found" });
+
+  const member = db.tripMembers.find(tm => tm.id === memberId && tm.tripId === id);
+  if (!member) return res.status(404).json({ error: "Camper not found" });
+  if (member.role === "host" || member.userId === trip.hostId) {
+    return res.status(403).json({ error: "The trip host can't be removed." });
+  }
+
+  db.tripMembers = db.tripMembers.filter(tm => tm.id !== memberId);
+  // Only drop group membership if no other trip-member entry shares this user
+  if (!db.tripMembers.some(tm => tm.tripId === id && tm.userId === member.userId)) {
+    db.groupMembers = db.groupMembers.filter(gm => !(gm.tripId === id && gm.userId === member.userId));
+    if (supabaseServer) await supabaseDeleteGroupMember(id, member.userId);
+  }
+  saveDb();
+  if (supabaseServer) await supabaseDeleteTripMember(memberId);
+
+  return res.json({ success: true, removedMemberId: memberId });
+});
 
 // Add a member/friend directly to trip
 router.post("/api/trips/:id/members", async (req, res) => {
@@ -28,8 +52,17 @@ router.post("/api/trips/:id/members", async (req, res) => {
   const cleanName = name.trim();
   const cleanEmail = (email || `${cleanName.toLowerCase().replace(/[^a-z0-9]/g, '.')}@camp.local`).toLowerCase().trim();
 
+  // Same camper already on this trip? (match by email, or by name when no real email was given)
+  const sameName = (n?: string) => (n || "").trim().toLowerCase() === cleanName.toLowerCase();
+  const existingMember = db.tripMembers.find(tm =>
+    tm.tripId === id && ((email && tm.email && tm.email.toLowerCase() === cleanEmail) || sameName(tm.name))
+  );
+
   // Find or create user
-  let user = db.users.find(u => (cleanEmail && u.email && u.email.toLowerCase() === cleanEmail) || (u.name && u.name.toLowerCase() === cleanName.toLowerCase()));
+  let user = existingMember
+    ? (db.users.find(u => u.id === existingMember.userId) || { id: existingMember.userId, name: existingMember.name, email: existingMember.email })
+    : db.users.find(u => (cleanEmail && u.email && u.email.toLowerCase() === cleanEmail) || (u.name && u.name.toLowerCase() === cleanName.toLowerCase()));
+  if (existingMember && !db.users.some(u => u.id === user!.id)) db.users.push(user);
   if (!user) {
     user = {
       id: `usr_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
@@ -40,7 +73,7 @@ router.post("/api/trips/:id/members", async (req, res) => {
   }
 
   // Check if member already in trip
-  let member = db.tripMembers.find(tm => tm.tripId === id && (tm.userId === user.id || (cleanEmail && tm.email.toLowerCase() === cleanEmail)));
+  let member = existingMember || db.tripMembers.find(tm => tm.tripId === id && (tm.userId === user!.id || (cleanEmail && tm.email.toLowerCase() === cleanEmail)));
   if (!member) {
     member = {
       id: `tm_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
@@ -52,7 +85,7 @@ router.post("/api/trips/:id/members", async (req, res) => {
       joinedAt: new Date().toISOString()
     };
     db.tripMembers.push(member);
-  } else {
+  } else if (!sameName(member.name)) {
     member.name = cleanName;
   }
 

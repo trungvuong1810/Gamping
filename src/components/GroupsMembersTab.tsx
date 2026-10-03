@@ -100,7 +100,7 @@ export const GroupsMembersTab: React.FC<GroupsMembersTabProps> = ({
         </div>
 
         {/* Quick switcher dropdown */}
-        <div className="flex items-center gap-2">
+        <div className="flex flex-col sm:flex-row sm:items-center gap-2 w-full sm:w-auto min-w-0">
           <span className="text-xs font-bold uppercase tracking-wider text-black shrink-0">Switch camper:</span>
           <select
             value={currentMember?.id || ''}
@@ -108,7 +108,7 @@ export const GroupsMembersTab: React.FC<GroupsMembersTabProps> = ({
               const found = members.find(m => m.id === e.target.value);
               if (found) onSelectCurrentMember(found);
             }}
-            className="text-xs px-3 py-2 bg-white text-black border border-black focus:outline-hidden font-medium"
+            className="w-full sm:w-auto min-w-0 text-xs px-3 py-2 bg-white text-black border border-black focus:outline-hidden font-medium"
           >
             <option value="" disabled>Select camper identity</option>
             {members.map(m => (
@@ -171,7 +171,7 @@ export const GroupsMembersTab: React.FC<GroupsMembersTabProps> = ({
                   <button
                     type="button"
                     onClick={() => setShowAddMemberModal(group.id)}
-                    className="text-xs text-black hover:underline font-bold flex items-center gap-1 cursor-pointer"
+                    className="tap-target text-xs text-black hover:underline font-bold flex items-center gap-1 cursor-pointer"
                   >
                     <UserPlus className="w-3.5 h-3.5" />
                     + Add Camper
@@ -255,7 +255,7 @@ export const GroupsMembersTab: React.FC<GroupsMembersTabProps> = ({
       {/* Add Camper Modal */}
       {showAddMemberModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-2xs">
-          <div className="bg-white border-2 border-black max-w-sm w-full p-6 text-black space-y-4 animate-slide-up">
+          <div className="bg-white border-2 border-black max-w-sm w-full p-6 text-black space-y-4 animate-slide-up max-h-[90dvh] overflow-y-auto">
             <h3 className="font-black text-black text-base uppercase tracking-tight">
               Add Camper to {groups.find(g => g.id === showAddMemberModal)?.name}
             </h3>
@@ -312,7 +312,7 @@ export const GroupsMembersTab: React.FC<GroupsMembersTabProps> = ({
       {/* Add Group Modal */}
       {showAddGroupModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-2xs">
-          <div className="bg-white border-2 border-black max-w-sm w-full p-6 text-black space-y-4 animate-slide-up">
+          <div className="bg-white border-2 border-black max-w-sm w-full p-6 text-black space-y-4 animate-slide-up max-h-[90dvh] overflow-y-auto">
             <h3 className="font-black text-black text-base uppercase tracking-tight">Create New Camping Group</h3>
 
             <form onSubmit={handleCreateGroup} className="space-y-3">

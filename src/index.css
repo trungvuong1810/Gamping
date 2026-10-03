@@ -54,3 +54,19 @@ html, body {
 .animate-slide-up {
   animation: slideUp 0.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
+
+/* ---------- Phone ergonomics ---------- */
+@media (max-width: 640px) {
+  /* iOS Safari zooms the page when a focused field's text is under 16px */
+  input, select, textarea {
+    font-size: 16px !important;
+  }
+  /* Small icon buttons (remove, packed checkbox, etc.) get a 40px touch area */
+  button[aria-label], button[title], .tap-target {
+    min-width: 40px;
+    min-height: 40px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+}

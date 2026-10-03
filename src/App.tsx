@@ -514,8 +514,8 @@ export default function App() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-18">
             {/* Logo & Trip Title */}
-            <div className="flex items-center gap-3.5">
-              <div className="w-10 h-10 border border-black bg-white flex items-center justify-center font-bold text-lg">
+            <div className="flex items-center gap-3 min-w-0 flex-1">
+              <div className="w-10 h-10 shrink-0 border border-black bg-white flex items-center justify-center font-bold text-lg">
                 🏕️
               </div>
               <div className="min-w-0">
@@ -523,7 +523,7 @@ export default function App() {
                   <h1 className="font-black text-base sm:text-lg tracking-tight uppercase text-black truncate max-w-[200px] sm:max-w-xs">
                     {trip.title}
                   </h1>
-                  <span className="bg-[#D6B588] text-white font-bold text-[10px] px-2 py-0.5 border border-black uppercase tracking-wider">
+                  <span className="hidden sm:inline bg-[#D6B588] text-white font-bold text-[10px] px-2 py-0.5 border border-black uppercase tracking-wider">
                     Active Trip
                   </span>
                 </div>
@@ -534,11 +534,11 @@ export default function App() {
             </div>
 
             {/* Right: Camper Profile (no Firebase button) */}
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-3 shrink-0 ml-3">
               {currentMember && (
                 <div className="flex items-center gap-2 px-3.5 py-1.5 border border-black bg-white text-xs">
                   <UserIcon className="w-3.5 h-3.5 text-black" />
-                  <span className="text-black font-bold uppercase tracking-wider">{currentMember.name}</span>
+                  <span className="text-black font-bold uppercase tracking-wider truncate max-w-[90px] sm:max-w-none">{currentMember.name}</span>
                 </div>
               )}
             </div>
@@ -552,66 +552,71 @@ export default function App() {
               <button
                 type="button"
                 onClick={() => setActiveTab('overview')}
-                className={`px-4 py-2 text-xs font-bold uppercase tracking-wider flex items-center gap-2 transition-all shrink-0 cursor-pointer border border-black ${
+                className={`px-4 py-3 sm:py-2 text-xs font-bold uppercase tracking-wider flex items-center gap-2 transition-all shrink-0 cursor-pointer border border-black ${
                   activeTab === 'overview'
                     ? 'bg-[#D6B588] text-white shadow-xs'
                     : 'bg-white text-black hover:bg-neutral-100'
                 }`}
               >
                 <Compass className="w-4 h-4" />
-                <span>Trip Hub & Sync</span>
+                <span className="sm:hidden">Overview</span>
+                <span className="hidden sm:inline">Trip Overview</span>
               </button>
 
               <button
                 type="button"
                 onClick={() => setActiveTab('groups')}
-                className={`px-4 py-2 text-xs font-bold uppercase tracking-wider flex items-center gap-2 transition-all shrink-0 cursor-pointer border border-black ${
+                className={`px-4 py-3 sm:py-2 text-xs font-bold uppercase tracking-wider flex items-center gap-2 transition-all shrink-0 cursor-pointer border border-black ${
                   activeTab === 'groups'
                     ? 'bg-[#D6B588] text-white shadow-xs'
                     : 'bg-white text-black hover:bg-neutral-100'
                 }`}
               >
                 <Users className="w-4 h-4" />
-                <span>Groups & Campers ({members.length})</span>
+                <span className="sm:hidden">Groups ({members.length})</span>
+                <span className="hidden sm:inline">Groups & Campers ({members.length})</span>
               </button>
 
               <button
                 type="button"
                 onClick={() => setActiveTab('gear')}
-                className={`px-4 py-2 text-xs font-bold uppercase tracking-wider flex items-center gap-2 transition-all shrink-0 cursor-pointer border border-black ${
+                className={`px-4 py-3 sm:py-2 text-xs font-bold uppercase tracking-wider flex items-center gap-2 transition-all shrink-0 cursor-pointer border border-black ${
                   activeTab === 'gear'
                     ? 'bg-[#D6B588] text-white shadow-xs'
                     : 'bg-white text-black hover:bg-neutral-100'
                 }`}
               >
                 <Backpack className="w-4 h-4" />
-                <span>Gear Checklist ({equipment.length})</span>
+                <span className="sm:hidden">Gear ({equipment.length})</span>
+                <span className="hidden sm:inline">Gear Checklist ({equipment.length})</span>
               </button>
 
               <button
                 type="button"
                 onClick={() => setActiveTab('food')}
-                className={`px-4 py-2 text-xs font-bold uppercase tracking-wider flex items-center gap-2 transition-all shrink-0 cursor-pointer border border-black ${
+                className={`px-4 py-3 sm:py-2 text-xs font-bold uppercase tracking-wider flex items-center gap-2 transition-all shrink-0 cursor-pointer border border-black ${
                   activeTab === 'food'
                     ? 'bg-[#D6B588] text-white shadow-xs'
                     : 'bg-white text-black hover:bg-neutral-100'
                 }`}
               >
                 <Utensils className="w-4 h-4" />
-                <span>Camp Menu ({food.length})</span>
+                <span className="sm:hidden">Menu ({food.length})</span>
+                <span className="hidden sm:inline">Camp Menu ({food.length})</span>
               </button>
 
               <button
                 type="button"
                 onClick={() => setActiveTab('weather')}
-                className={`px-4 py-2 text-xs font-bold uppercase tracking-wider flex items-center gap-2 transition-all shrink-0 cursor-pointer border border-black ${
+                className={`px-4 py-3 sm:py-2 text-xs font-bold uppercase tracking-wider flex items-center gap-2 transition-all shrink-0 cursor-pointer border border-black ${
                   activeTab === 'weather'
                     ? 'bg-[#D6B588] text-white shadow-xs'
                     : 'bg-white text-black hover:bg-neutral-100'
                 }`}
               >
                 <CloudSun className="w-4 h-4" />
-                <span>Google Weather</span>
+                <span className="sm:hidden">Weather</span>
+                <span className="hidden sm:inline">Weather</span>
               </button>
             </nav>
           </div>

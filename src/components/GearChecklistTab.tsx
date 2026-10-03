@@ -269,6 +269,7 @@ export const GearChecklistTab: React.FC<GearChecklistTabProps> = ({
                   <button
                     type="button"
                     onClick={() => onTogglePacked(item.id, !item.packed)}
+                    aria-label={item.packed ? 'Mark as not packed' : 'Mark as packed'}
                     className="shrink-0 text-black cursor-pointer"
                   >
                     {item.packed ? (
@@ -337,7 +338,7 @@ export const GearChecklistTab: React.FC<GearChecklistTabProps> = ({
       {/* Add Gear Item Modal */}
       {showAddModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-2xs">
-          <div className="bg-white border-2 border-black max-w-md w-full p-6 text-black space-y-4 animate-slide-up">
+          <div className="bg-white border-2 border-black max-w-md w-full p-6 text-black space-y-4 animate-slide-up max-h-[90dvh] overflow-y-auto">
             <h3 className="font-black text-black text-base uppercase tracking-tight">Add Camping Gear Item</h3>
 
             <form onSubmit={handleCreateItem} className="space-y-3">

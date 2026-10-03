@@ -320,67 +320,11 @@ export const CampOverviewTab: React.FC<CampOverviewTabProps> = ({
           </div>
         </div>
 
-        {/* Right Column: Google Sheets Synchronization & Hub */}
+        {/* Right Column */}
         <div className="space-y-8">
-          {/* Google Sheets Engine Card */}
-          <div className="border border-black p-6 bg-white space-y-4">
-            <div>
-              <h3 className="font-bold text-black text-sm uppercase tracking-wider">Google Spreadsheet Hub</h3>
-              <p className="text-xs text-black/70">Real-Time Data Sync Across All Devices</p>
-            </div>
-
-            <p className="text-xs text-black/80 leading-relaxed">
-              Every detail in this camping planner synchronizes with your connected Google Spreadsheet so all friends stay organized.
-            </p>
-
-            {trip.googleSpreadsheetId ? (
-              <div className="space-y-3 pt-2">
-                <div className="p-3 border border-black bg-neutral-50 text-xs space-y-2">
-                  <div className="flex items-center justify-between">
-                    <span className="text-black/70">Status:</span>
-                    <span className="bg-[#D6B588] text-white font-bold text-[10px] px-2 py-0.5 border border-black">
-                      Connected
-                    </span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-black/70">Spreadsheet:</span>
-                    <span className="font-medium text-black truncate max-w-[150px]">
-                      {trip.googleSpreadsheetTitle || 'Camping Planner'}
-                    </span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-black/70">Last Synced:</span>
-                    <span className="text-black font-medium">
-                      {trip.googleSpreadsheetLastSynced ? new Date(trip.googleSpreadsheetLastSynced).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Live'}
-                    </span>
-                  </div>
-                </div>
-
-                <a
-                  href={trip.googleSpreadsheetUrl || `https://docs.google.com/spreadsheets/d/${trip.googleSpreadsheetId}/edit`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="w-full bg-[#D6B588] hover:bg-[#c9a676] text-white font-bold text-xs uppercase tracking-wider py-3 px-4 border border-black transition-all flex items-center justify-center gap-2 cursor-pointer shadow-xs"
-                >
-                  <ExternalLink className="w-4 h-4" />
-                  <span>Open in Google Sheets</span>
-                </a>
-              </div>
-            ) : (
-              <div className="p-4 border border-black bg-neutral-50 text-xs text-black space-y-2">
-                <div className="font-bold uppercase tracking-wider">
-                  Google Sheet Not Connected
-                </div>
-                <p className="text-xs text-black/80 leading-relaxed">
-                  Click the "Connect Google Spreadsheet" button in the top banner to link your spreadsheet.
-                </p>
-              </div>
-            )}
-          </div>
-
           {/* Quick AI Grok Assistant Card */}
           <div className="border border-black p-6 bg-white space-y-3">
-            <h3 className="font-bold text-black text-sm uppercase tracking-wider">Grok 4.6 Expedition AI</h3>
+            <h3 className="font-bold text-black text-sm uppercase tracking-wider">Grok Expedition AI</h3>
             <p className="text-xs text-black/80 leading-relaxed">
               Generate gear checklists and campfire culinary menus tailored to your campground's terrain, weather, and party size.
             </p>

@@ -14,19 +14,15 @@ import {
   fetchTripDetails,
   createTrip,
   updateTrip,
-  updateTripGoogleSheet,
   createGroup,
   fetchTripWeather
 } from './api/client';
-import { GoogleSheetSyncBanner } from './components/GoogleSheetSyncBanner';
 import { CampOverviewTab } from './components/CampOverviewTab';
 import { GroupsMembersTab } from './components/GroupsMembersTab';
 import { GearChecklistTab } from './components/GearChecklistTab';
 import { CampMenuTab } from './components/CampMenuTab';
 import { WeatherTab } from './components/WeatherTab';
 import { CreateTripModal } from './components/CreateTripModal';
-import { pushTripDataToSpreadsheet } from './lib/googleSheets';
-import { getAccessToken } from './lib/googleAuth';
 import {
   Compass,
   Users,
@@ -34,7 +30,7 @@ import {
   Utensils,
   CloudSun,
   Plus,
-  Sheet,
+  Cloud,
   User as UserIcon
 } from 'lucide-react';
 
@@ -132,36 +128,6 @@ export default function App() {
     localStorage.setItem('camping_active_camper_id', member.id);
   };
 
-  // Helper to trigger background Google Sheet push if connected
-  const pushToGoogleSheetIfConnected = async (
-    latestTrip: Trip,
-    latestMembers: TripMember[],
-    latestGroups: Group[],
-    latestEquipment: EquipmentItem[],
-    latestFood: FoodItem[]
-  ) => {
-    if (!latestTrip.googleSpreadsheetId) return;
-    try {
-      const token = await getAccessToken();
-      if (token) {
-        await pushTripDataToSpreadsheet(token, latestTrip.googleSpreadsheetId, {
-          trip: latestTrip,
-          members: latestMembers,
-          groups: latestGroups,
-          equipment: latestEquipment,
-          food: latestFood,
-          weather: weatherReport ? { forecastDays: weatherReport.forecastDays } : undefined
-        });
-        updateTripGoogleSheet(latestTrip.id, {
-          googleSpreadsheetLastSynced: new Date().toISOString(),
-          googleSpreadsheetSyncStatus: 'connected'
-        }).catch(() => {});
-      }
-    } catch (err) {
-      console.warn('Background sheet sync notice:', err);
-    }
-  };
-
   // Handle Trip creation
   const handleCreateTripSubmit = async (tripData: {
     title: string;
@@ -231,7 +197,6 @@ export default function App() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ packed, userId: currentMember?.userId || trip.hostId })
       });
-      pushToGoogleSheetIfConnected(trip, members, groups, updated, food);
     } catch (err) {
       console.error('Failed to toggle packed:', err);
     }
@@ -269,7 +234,6 @@ export default function App() {
           ...data
         })
       });
-      pushToGoogleSheetIfConnected(trip, members, groups, updated, food);
     } catch (err) {
       console.error('Failed to add equipment:', err);
     }
@@ -287,13 +251,12 @@ export default function App() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ userId: currentMember?.userId || trip.hostId })
       });
-      pushToGoogleSheetIfConnected(trip, members, groups, updated, food);
     } catch (err) {
       console.error('Failed to delete equipment:', err);
     }
   };
 
-  // Batch add equipment from Grok 4.6
+  // Batch add equipment from Grok
   const handleBatchAddEquipment = async (
     items: Array<{ name: string; category: PackingCategory; groupId: string; notes: string; aiSuggested: boolean }>
   ) => {
@@ -329,7 +292,6 @@ export default function App() {
           })
         });
       }
-      pushToGoogleSheetIfConnected(trip, members, groups, updated, food);
     } catch (err) {
       console.error('Failed to batch add equipment:', err);
     }
@@ -373,7 +335,6 @@ export default function App() {
           ...data
         })
       });
-      pushToGoogleSheetIfConnected(trip, members, groups, equipment, updated);
     } catch (err) {
       console.error('Failed to add meal:', err);
     }
@@ -391,7 +352,6 @@ export default function App() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ status, userId: currentMember?.userId || trip.hostId })
       });
-      pushToGoogleSheetIfConnected(trip, members, groups, equipment, updated);
     } catch (err) {
       console.error('Failed to update meal status:', err);
     }
@@ -409,7 +369,6 @@ export default function App() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ userId: currentMember?.userId || trip.hostId })
       });
-      pushToGoogleSheetIfConnected(trip, members, groups, equipment, updated);
     } catch (err) {
       console.error('Failed to delete meal:', err);
     }
@@ -455,7 +414,7 @@ export default function App() {
             <Compass className="w-6 h-6 text-black animate-spin" />
           </div>
           <h2 className="font-black uppercase text-sm tracking-widest text-black">Loading Camping Expedition...</h2>
-          <p className="text-xs text-black/60">Connecting with Google Spreadsheet</p>
+          <p className="text-xs text-black/60">Loading your trip</p>
         </div>
       </div>
     );
@@ -473,7 +432,7 @@ export default function App() {
             </div>
             <div>
               <span className="font-black text-base tracking-tight uppercase text-black block">CAMPING SYNC</span>
-              <span className="text-[11px] text-black/70 font-semibold uppercase tracking-wider block -mt-0.5">Google Spreadsheet Real-Time Expedition Planner</span>
+              <span className="text-[11px] text-black/70 font-semibold uppercase tracking-wider block -mt-0.5">Group Camping Trip Planner</span>
             </div>
           </div>
         </header>
@@ -485,11 +444,11 @@ export default function App() {
           </div>
 
           <h1 className="text-4xl sm:text-5xl font-black text-black tracking-tight uppercase max-w-2xl mx-auto leading-tight">
-            Plan your camping trip with live Google Spreadsheet sync.
+            Plan your group camping trip together.
           </h1>
 
           <p className="text-sm sm:text-base text-black/80 max-w-xl mx-auto leading-relaxed">
-            Automatically connects to Google Sheets so whoever opens the link from any phone or computer stays in real-time sync with gear lists, group menus, and weather updates.
+            Everyone who opens the link — on any phone or computer — sees the same gear lists, group menus and weather updates, saved safely in the cloud.
           </p>
 
           <div className="pt-4 flex items-center justify-center">
@@ -507,10 +466,10 @@ export default function App() {
           {/* Highlights */}
           <div className="pt-12 grid grid-cols-1 sm:grid-cols-3 gap-6 text-left">
             <div className="p-6 border border-black bg-white space-y-2">
-              <Sheet className="w-6 h-6 text-black" />
-              <h3 className="font-black uppercase text-sm text-black">Google Spreadsheet Sync</h3>
+              <Cloud className="w-6 h-6 text-black" />
+              <h3 className="font-black uppercase text-sm text-black">Saved in the Cloud</h3>
               <p className="text-xs text-black/70 leading-relaxed">
-                Bidirectional synchronization so changes in the app or inside Google Sheets sync instantly across all devices.
+                Trips, groups, gear and meals are stored in a real database, so nothing disappears and every device sees the latest plan.
               </p>
             </div>
 
@@ -526,7 +485,7 @@ export default function App() {
               <CloudSun className="w-6 h-6 text-black" />
               <h3 className="font-black uppercase text-sm text-black">Google Weather & Grok AI</h3>
               <p className="text-xs text-black/70 leading-relaxed">
-                Live campground weather forecasts and Grok 4.6 AI suggestions for gear checklists and campfire culinary recipes.
+                Live campground weather forecasts and Grok AI suggestions for gear checklists and campfire culinary recipes.
               </p>
             </div>
           </div>
@@ -534,7 +493,7 @@ export default function App() {
 
         {/* Footer */}
         <footer className="border-t border-black py-6 text-center text-xs font-semibold uppercase tracking-wider text-black/60">
-          Private Camping Expedition Planner • Synchronized with Google Sheets
+          Private Camping Expedition Planner
         </footer>
 
         {/* Create Trip Modal */}
@@ -659,24 +618,6 @@ export default function App() {
         </div>
       </header>
 
-      {/* Real-time Google Spreadsheet Sync Banner */}
-      <GoogleSheetSyncBanner
-        trip={trip}
-        members={members}
-        groups={groups}
-        equipment={equipment}
-        food={food}
-        forecastDays={weatherReport?.forecastDays}
-        onTripUpdated={(updated) => setTrip(updated)}
-        onRefreshData={() => loadTripData()}
-        onGearPulled={(items) => {
-          const updated = equipment.map((eq) => {
-            const match = items.find((it) => it.name.toLowerCase() === eq.name.toLowerCase());
-            return match ? { ...eq, packed: match.packed } : eq;
-          });
-          setEquipment(updated);
-        }}
-      />
 
       {/* Main Tab Content */}
       <main className="max-w-7xl mx-auto px-4 py-8 sm:px-6 lg:px-8 flex-1 w-full bg-white">

@@ -1,5 +1,5 @@
 import dotenv from "dotenv";
-import { getCuratedRegionalParks, REFERENCE_CITIES } from "./server-places.js";
+import { getCuratedRegionalParks, REFERENCE_CITIES } from "./places.js";
 
 dotenv.config();
 
@@ -41,7 +41,7 @@ export async function callGrokAi<T = any>(params: GrokCallParams): Promise<{ suc
     return {
       success: false,
       error: "No GROK_API_KEY or XAI_API_KEY configured in environment.",
-      modelUsed: "curated-grok-4.6-engine"
+      modelUsed: "curated-offline"
     };
   }
 
@@ -65,7 +65,7 @@ export async function callGrokAi<T = any>(params: GrokCallParams): Promise<{ suc
 
     if (!response.ok) {
       const errText = await response.text();
-      console.warn(`[Grok 4.6 API HTTP Error ${response.status}]:`, errText);
+      console.warn(`[Grok API HTTP Error ${response.status}]:`, errText);
       return {
         success: false,
         error: `Grok API error (${response.status}): ${errText}`,
@@ -90,19 +90,19 @@ export async function callGrokAi<T = any>(params: GrokCallParams): Promise<{ suc
         success: true,
         data: parsed as T,
         rawText: content,
-        modelUsed: "grok-4.6"
+        modelUsed: getGrokModelName()
       };
     } catch (parseErr) {
-      console.warn("[Grok 4.6 API] Could not parse JSON response:", cleaned);
+      console.warn("[Grok API] Could not parse JSON response:", cleaned);
       return {
         success: false,
         rawText: content,
         error: "Failed to parse JSON response from Grok",
-        modelUsed: "grok-4.6"
+        modelUsed: getGrokModelName()
       };
     }
   } catch (netErr: any) {
-    console.error("[Grok 4.6 API Network Error]:", netErr);
+    console.error("[Grok API Network Error]:", netErr);
     return {
       success: false,
       error: netErr.message || "Network failure connecting to xAI API",
@@ -112,7 +112,7 @@ export async function callGrokAi<T = any>(params: GrokCallParams): Promise<{ suc
 }
 
 // ==========================================
-// 1. Grok 4.6 Park Recommendations Engine
+// 1. Grok Park Recommendations Engine
 // ==========================================
 export async function recommendParksWithGrok(params: {
   originCity: string;
@@ -124,7 +124,7 @@ export async function recommendParksWithGrok(params: {
 }) {
   const { originCity, distance, experience, activitiesList, customNotes, coordinates } = params;
 
-  const systemPrompt = `You are Grok 4.6, the premier wilderness intelligence and public campsite locator.
+  const systemPrompt = `You are Grok, the premier wilderness intelligence and public campsite locator.
 You exclusively recommend real, authentic, existing public campgrounds (State Parks, Provincial Parks, National Parks, National Forests) located strictly within the user's driving distance radius from their specified departure city.
 You must always output strict, valid JSON matching the exact schema requested, with no conversational filler.`;
 
@@ -158,16 +158,16 @@ Return a JSON array of 10 park objects with these exact keys:
 
   const grokRes = await callGrokAi({ systemPrompt, userPrompt, temperature: 0.3 });
   if (grokRes.success && Array.isArray(grokRes.data) && grokRes.data.length > 0) {
-    return { parks: grokRes.data, source: "grok-4.6" };
+    return { parks: grokRes.data, source: getGrokModelName() };
   }
 
   // High precision curated regional intelligence matching exact location
   const curated = getCuratedRegionalParks(originCity, distance, experience, coordinates);
-  return { parks: curated, source: "curated-grok-4.6-engine" };
+  return { parks: curated, source: "curated-offline" };
 }
 
 // ==========================================
-// 2. Grok 4.6 Custom / Manual Park Search
+// 2. Grok Custom / Manual Park Search
 // ==========================================
 export async function generateCustomParkWithGrok(params: {
   parkName: string;
@@ -176,7 +176,7 @@ export async function generateCustomParkWithGrok(params: {
 }) {
   const { parkName, originCity, coordinates } = params;
 
-  const systemPrompt = `You are Grok 4.6, the wilderness search engine. Provide accurate, real campground details for the requested park.`;
+  const systemPrompt = `You are Grok, the wilderness search engine. Provide accurate, real campground details for the requested park.`;
   const userPrompt = `Provide realistic camping details for the park "${parkName}" with departure point "${originCity || "Nearby"}".
 
 Return ONLY a JSON object with:
@@ -192,7 +192,7 @@ Return ONLY a JSON object with:
 
   const grokRes = await callGrokAi({ systemPrompt, userPrompt, temperature: 0.3 });
   if (grokRes.success && grokRes.data && grokRes.data.name) {
-    return { park: grokRes.data, source: "grok-4.6" };
+    return { park: grokRes.data, source: getGrokModelName() };
   }
 
   return {
@@ -207,12 +207,12 @@ Return ONLY a JSON object with:
       activities: ["Hiking & Nature Walks", "Campfire Gathering", "Stargazing", "Outdoor Cooking"],
       description: `Scenic wilderness park offering tranquil multi-group camping, framed by natural beauty and accessible hiking routes.`
     },
-    source: "curated-grok-4.6-engine"
+    source: "curated-offline"
   };
 }
 
 // ==========================================
-// 3. Grok 4.6 Quick Equipment Draft
+// 3. Grok Quick Equipment Draft
 // ==========================================
 export async function generateEquipmentSuggestionsWithGrok(params: {
   location: string;
@@ -224,7 +224,7 @@ export async function generateEquipmentSuggestionsWithGrok(params: {
   const { location, startDate, endDate, activities, groupName } = params;
   const month = startDate ? new Date(startDate).toLocaleString('default', { month: 'long' }) : "Seasonable";
 
-  const systemPrompt = `You are Grok 4.6, the camping equipment intelligence engine. Generate smart, essential equipment suggestions for group camping.`;
+  const systemPrompt = `You are Grok, the camping equipment intelligence engine. Generate smart, essential equipment suggestions for group camping.`;
   const userPrompt = `Context:
 - Destination: ${location || "Wilderness Campground"}
 - Dates: ${startDate || "Upcoming"} to ${endDate || "Upcoming"} (${month})
@@ -239,7 +239,7 @@ Provide a JSON array of 8 to 12 items. Each item:
 
   const grokRes = await callGrokAi({ systemPrompt, userPrompt, temperature: 0.3 });
   if (grokRes.success && Array.isArray(grokRes.data) && grokRes.data.length > 0) {
-    return { suggestions: grokRes.data, source: "grok-4.6" };
+    return { suggestions: grokRes.data, source: getGrokModelName() };
   }
 
   // Curated Fallback
@@ -254,12 +254,12 @@ Provide a JSON array of 8 to 12 items. Each item:
       { name: "10-Person Wilderness First Aid Kit", category: "Tools & First Aid", notes: "Includes blister treatment, bandages, and antiseptic", defaultPacked: false },
       { name: "Heavy-Duty Multi-Tool & Duct Tape", category: "Tools & First Aid", notes: "Quick gear repair for poles, tarps, and stove maintenance", defaultPacked: false }
     ],
-    source: "curated-grok-4.6-engine"
+    source: "curated-offline"
   };
 }
 
 // ==========================================
-// 4. Grok 4.6 Comprehensive 4-Category Packing List
+// 4. Grok Comprehensive 4-Category Packing List
 // ==========================================
 export async function generatePackingListWithGrok(params: {
   destination: string;
@@ -295,7 +295,7 @@ export async function generatePackingListWithGrok(params: {
     weatherContext = "Seasonable temperate wilderness climate with potential evening temperature drop";
   }
 
-  const systemPrompt = `You are Grok 4.6, the dedicated wilderness logistics engine. You generate comprehensive, realistic camping packing checklists strictly organized into 4 categories: 'Shelter', 'Cooking', 'Clothing', and 'Personal Items'.`;
+  const systemPrompt = `You are Grok, the dedicated wilderness logistics engine. You generate comprehensive, realistic camping packing checklists strictly organized into 4 categories: 'Shelter', 'Cooking', 'Clothing', and 'Personal Items'.`;
 
   const userPrompt = `Destination: ${destName}
 Season: ${seasonName}
@@ -344,16 +344,16 @@ Return a JSON array of 16 to 22 structured items. Each item:
 
     return {
       items: validated,
-      source: "grok-4.6",
-      meta: { destination: destName, season: seasonName, activities: actList, engine: "Grok 4.6" }
+      source: getGrokModelName(),
+      meta: { destination: destName, season: seasonName, activities: actList, engine: "Grok" }
     };
   }
 
   // Curated Fallback
   return {
     items: generateCuratedGrokPackingList(destName, seasonName, actList),
-    source: "curated-grok-4.6-engine",
-    meta: { destination: destName, season: seasonName, activities: actList, engine: "Grok 4.6" }
+    source: "curated-offline",
+    meta: { destination: destName, season: seasonName, activities: actList, engine: "Grok" }
   };
 }
 
@@ -397,7 +397,7 @@ function generateCuratedGrokPackingList(destination: string, season: string, act
 }
 
 // ==========================================
-// 5. Grok 4.6 Camp Culinary & Meal Suggestions
+// 5. Grok Camp Culinary & Meal Suggestions
 // ==========================================
 export async function generateMealSuggestionsWithGrok(params: {
   destination?: string;
@@ -409,7 +409,7 @@ export async function generateMealSuggestionsWithGrok(params: {
   const destName = destination || "Campground";
   const numCampers = groupSize || 6;
 
-  const systemPrompt = `You are Grok 4.6, the dedicated camping culinary and outdoor meal planning engine. Generate appetizing, realistic group camp meals categorized into breakfast, lunch, dinner, and snacks.`;
+  const systemPrompt = `You are Grok, the dedicated camping culinary and outdoor meal planning engine. Generate appetizing, realistic group camp meals categorized into breakfast, lunch, dinner, and snacks.`;
 
   const userPrompt = `Generate 8 camp meal suggestions for ${numCampers} campers at ${destName} during ${season || "Summer"}.
 (2 breakfast, 2 lunch, 2 dinner, 2 snacks).
@@ -424,7 +424,7 @@ Format as a strict JSON array of 8 objects with:
 
   const grokRes = await callGrokAi({ systemPrompt, userPrompt, temperature: 0.3 });
   if (grokRes.success && Array.isArray(grokRes.data) && grokRes.data.length > 0) {
-    return { meals: grokRes.data, source: "grok-4.6" };
+    return { meals: grokRes.data, source: getGrokModelName() };
   }
 
   // High quality curated meal ideas
@@ -495,6 +495,6 @@ Format as a strict JSON array of 8 objects with:
         cookMethod: "No-Cook"
       }
     ],
-    source: "curated-grok-4.6-engine"
+    source: "curated-offline"
   };
 }

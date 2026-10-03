@@ -34,7 +34,7 @@ To keep data permanently, connect Supabase (free tier is fine):
 
 At startup, the server loads all saved data from Supabase and then writes every change back to it. If Supabase isn't configured, the server prints a warning at startup.
 
-> Not yet stored in Supabase: the "frequent friends" list, per-trip weather-alert settings and Google Sheet links. These still live only in `data/storage.json`.
+> Everything the app shows (trips, members, groups, gear, meals) is stored in Supabase.
 
 ## Environment variables
 
@@ -62,7 +62,7 @@ server/
   grok.ts               xAI Grok API client and offline fallbacks
   places.ts             Reference cities and curated regional parks
   routes/               One Express router per feature:
-    ai, places, auth, friends, trips, groups, equipment, food, weather, admin
+    ai, places, auth, trips, groups, equipment, food, weather, admin
 src/                    React client (components/, api/client.ts, lib/, types.ts)
 supabase-schema.sql     Database schema for Supabase
 ```

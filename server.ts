@@ -8,7 +8,6 @@ import { checkAndDispatchWeatherAlerts } from "./server/weather.js";
 import { router as aiRoutes } from "./server/routes/ai.js";
 import { router as placesRoutes } from "./server/routes/places.js";
 import { router as authRoutes } from "./server/routes/auth.js";
-import { router as friendsRoutes } from "./server/routes/friends.js";
 import { router as tripsRoutes } from "./server/routes/trips.js";
 import { router as adminRoutes } from "./server/routes/admin.js";
 import { router as groupsRoutes } from "./server/routes/groups.js";
@@ -28,7 +27,6 @@ if (isGrokConfigured()) {
 app.use(aiRoutes);
 app.use(placesRoutes);
 app.use(authRoutes);
-app.use(friendsRoutes);
 app.use(tripsRoutes);
 app.use(adminRoutes);
 app.use(groupsRoutes);

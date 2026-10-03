@@ -348,36 +348,6 @@ export async function getAiMealSuggestions(data: {
   return res.json();
 }
 
-export async function fetchFriends(userId: string): Promise<{ friends: Friend[] }> {
-  const res = await fetch(`/api/friends?userId=${encodeURIComponent(userId)}`);
-  if (!res.ok) throw new Error('Failed to fetch friends');
-  return res.json();
-}
-
-export async function addFriend(data: {
-  userId: string;
-  friendEmail: string;
-  friendName?: string;
-  tags?: string[];
-}): Promise<{ friend: Friend }> {
-  const res = await fetch('/api/friends', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(data)
-  });
-  if (!res.ok) {
-    const err = await res.json();
-    throw new Error(err.error || 'Failed to add friend');
-  }
-  return res.json();
-}
-
-export async function deleteFriend(friendId: string): Promise<{ success: boolean }> {
-  const res = await fetch(`/api/friends/${friendId}`, { method: 'DELETE' });
-  if (!res.ok) throw new Error('Failed to delete friend');
-  return res.json();
-}
-
 export async function fetchLongWeekends(year: number = 2026): Promise<{ holidays: LongWeekendOption[] }> {
   const res = await fetch(`/api/ai/long-weekends?year=${year}`);
   if (!res.ok) throw new Error('Failed to fetch long weekends');
@@ -571,22 +541,6 @@ export async function loginOrRegisterWithPin(data: {
   return res.json();
 }
 
-export async function clearAllDatabaseData(): Promise<{
-  success: boolean;
-  supabaseCleared: boolean;
-  message: string;
-}> {
-  const res = await fetch('/api/admin/clear-data', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' }
-  });
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({}));
-    throw new Error(err.error || 'Failed to clear database data');
-  }
-  return res.json();
-}
-
 export async function registerAccount(data: {
   username: string;
   email: string;
@@ -719,26 +673,5 @@ export async function fetchActiveTrip(): Promise<{
   return res.json();
 }
 
-export async function updateTripGoogleSheet(
-  tripId: string,
-  data: {
-    googleSpreadsheetId?: string;
-    googleSpreadsheetUrl?: string;
-    googleSpreadsheetTitle?: string;
-    googleSpreadsheetLastSynced?: string;
-    googleSpreadsheetSyncStatus?: 'connected' | 'syncing' | 'error' | 'not_connected';
-  }
-): Promise<{ success: boolean; trip: Trip }> {
-  const res = await fetch(`/api/trips/${tripId}/google-sheet`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(data)
-  });
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({}));
-    throw new Error(err.error || 'Failed to update Google Sheet metadata');
-  }
-  return res.json();
-}
 
 

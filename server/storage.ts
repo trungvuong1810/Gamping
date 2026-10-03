@@ -44,11 +44,6 @@ export interface StorageData {
       lastSentAt?: string;
       lastForecastSummary?: string;
     };
-    googleSpreadsheetId?: string;
-    googleSpreadsheetUrl?: string;
-    googleSpreadsheetTitle?: string;
-    googleSpreadsheetLastSynced?: string;
-    googleSpreadsheetSyncStatus?: string;
   }>;
   tripMembers: Array<{
     id: string;

@@ -6,49 +6,6 @@ import { db, saveDb } from "../storage.js";
 
 export const router = express.Router();
 
-// Clear all database & memory data to restart fresh
-router.post("/api/admin/clear-data", async (req, res) => {
-  try {
-    db.trips = [];
-    db.users = [];
-    db.accounts = [];
-    db.invitations = [];
-    db.tripMembers = [];
-    db.groups = [];
-    db.groupMembers = [];
-    db.equipmentItems = [];
-    db.foodItems = [];
-    db.friends = [];
-    saveDb();
-
-    let supabaseCleared = false;
-    if (supabaseServer) {
-      try {
-        await supabaseServer.from("trip_invitations").delete().neq("id", "0");
-        await supabaseServer.from("group_members").delete().neq("id", "0");
-        await supabaseServer.from("groups").delete().neq("id", "0");
-        await supabaseServer.from("equipment_items").delete().neq("id", "0");
-        await supabaseServer.from("food_items").delete().neq("id", "0");
-        await supabaseServer.from("trip_members").delete().neq("id", "0");
-        await supabaseServer.from("trips").delete().neq("id", "0");
-        await supabaseServer.from("app_users").delete().neq("id", "0");
-        supabaseCleared = true;
-      } catch (sbErr: any) {
-        console.warn("Supabase clear error:", sbErr?.message);
-      }
-    }
-
-    return res.status(200).json({
-      success: true,
-      supabaseCleared,
-      message: supabaseCleared
-        ? "All trip data, users, and invitations cleared from Supabase and local memory."
-        : "All local trip data, users, and invitations cleared successfully."
-    });
-  } catch (err: any) {
-    return res.status(500).json({ error: err.message || "Failed to clear data" });
-  }
-});
 
 router.get("/api/supabase/verify-tables", async (req, res) => {
   if (!supabaseServer) {
@@ -67,8 +24,7 @@ router.get("/api/supabase/verify-tables", async (req, res) => {
     "groups",
     "group_members",
     "equipment_items",
-    "food_items",
-    "friends"
+    "food_items"
   ];
 
   const tableStatus: Record<string, { exists: boolean; error?: string }> = {};

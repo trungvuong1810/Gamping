@@ -68,11 +68,6 @@ export interface Trip {
   passwordExpiresAt?: string;
   createdAt: string;
   weatherAlertConfig?: WeatherAlertConfig;
-  googleSpreadsheetId?: string;
-  googleSpreadsheetUrl?: string;
-  googleSpreadsheetTitle?: string;
-  googleSpreadsheetLastSynced?: string;
-  googleSpreadsheetSyncStatus?: 'connected' | 'syncing' | 'error' | 'not_connected';
 }
 
 export interface TripMember {

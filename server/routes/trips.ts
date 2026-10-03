@@ -93,32 +93,6 @@ router.get("/api/active-trip", async (req, res) => {
   });
 });
 
-// Connect or update Google Spreadsheet metadata for a trip
-router.post("/api/trips/:id/google-sheet", (req, res) => {
-  const { id } = req.params;
-  const {
-    googleSpreadsheetId,
-    googleSpreadsheetUrl,
-    googleSpreadsheetTitle,
-    googleSpreadsheetLastSynced,
-    googleSpreadsheetSyncStatus
-  } = req.body;
-
-  const trip = db.trips.find(t => t.id === id);
-  if (!trip) {
-    return res.status(404).json({ error: "Trip not found" });
-  }
-
-  if (googleSpreadsheetId !== undefined) trip.googleSpreadsheetId = googleSpreadsheetId;
-  if (googleSpreadsheetUrl !== undefined) trip.googleSpreadsheetUrl = googleSpreadsheetUrl;
-  if (googleSpreadsheetTitle !== undefined) trip.googleSpreadsheetTitle = googleSpreadsheetTitle;
-  trip.googleSpreadsheetLastSynced = googleSpreadsheetLastSynced || new Date().toISOString();
-  trip.googleSpreadsheetSyncStatus = googleSpreadsheetSyncStatus || "connected";
-  saveDb();
-
-  return res.json({ success: true, trip });
-});
-
 // Get single trip with all details, members, groups, lists
 router.get("/api/trips/:id", async (req, res) => {
   const { id } = req.params;

@@ -443,6 +443,8 @@ export const GearChecklistTab: React.FC<GearChecklistTabProps> = ({
         endDate={trip.endDate}
         groups={groups}
         activeGroupId={selectedGroupFilter !== 'all' ? selectedGroupFilter : groups[0]?.id}
+        groupSize={members.length || undefined}
+        existingItems={equipment.map(e => e.name)}
         onAddItems={onBatchAddItems}
       />
     </div>

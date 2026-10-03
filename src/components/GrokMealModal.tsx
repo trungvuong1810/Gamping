@@ -9,6 +9,8 @@ interface GrokMealModalProps {
   season?: string;
   groups: Group[];
   daysCount?: number;
+  defaultGroupSize?: number;
+  existingMeals?: string[];
   onAddMeal: (meal: {
     title: string;
     mealTime: MealTime;
@@ -36,11 +38,14 @@ export const GrokMealModal: React.FC<GrokMealModalProps> = ({
   season = 'Summer',
   groups,
   daysCount = 3,
+  defaultGroupSize,
+  existingMeals = [],
   onAddMeal,
 }) => {
   const [selectedGroup, setSelectedGroup] = useState<string>(groups[0]?.id || '');
   const [selectedDay, setSelectedDay] = useState<string>('Day 1');
-  const [groupSize, setGroupSize] = useState<number>(6);
+  const [groupSize, setGroupSize] = useState<number>(defaultGroupSize && defaultGroupSize > 1 ? defaultGroupSize : 6);
+  const [preferences, setPreferences] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [mealIdeas, setMealIdeas] = useState<MealIdea[]>([]);
   const [hasGenerated, setHasGenerated] = useState(false);
@@ -59,7 +64,10 @@ export const GrokMealModal: React.FC<GrokMealModalProps> = ({
           destination: destination || 'Campsite',
           season,
           groupSize,
-          activities: ['Campfire Cooking', 'Hiking']
+          activities: ['Campfire Cooking', 'Hiking'],
+          preferences,
+          existingMeals,
+          daysCount
         })
       });
 
@@ -200,6 +208,20 @@ export const GrokMealModal: React.FC<GrokMealModalProps> = ({
                 className="w-full text-xs px-3 py-2 bg-white border border-black focus:outline-hidden font-medium"
               />
             </div>
+          </div>
+
+          {/* Food preferences */}
+          <div>
+            <label className="block text-xs font-bold uppercase tracking-wider text-black mb-1">
+              Cuisine / dietary preferences (optional)
+            </label>
+            <input
+              type="text"
+              value={preferences}
+              onChange={(e) => setPreferences(e.target.value)}
+              placeholder="e.g. Vietnamese & Korean BBQ, one vegetarian, kid-friendly, no pork"
+              className="w-full text-xs px-3 py-2 bg-white border border-black focus:outline-hidden font-medium"
+            />
           </div>
 
           {/* Generate Button */}

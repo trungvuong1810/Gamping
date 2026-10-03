@@ -237,14 +237,19 @@ router.post("/api/ai/generate-custom-park", async (req, res) => {
 
 // 3. Equipment Draft Suggestions (Grok engine exclusively)
 router.post("/api/ai/equipment-suggestions", async (req, res) => {
-  const { location, startDate, endDate, activities, groupName } = req.body;
+  const { location, startDate, endDate, activities, groupName, season, groupSize, notes, existingItems, weatherSummary } = req.body;
 
   const result = await generateEquipmentSuggestionsWithGrok({
     location,
     startDate,
     endDate,
     activities,
-    groupName
+    groupName,
+    season,
+    groupSize: Number(groupSize) || undefined,
+    notes: typeof notes === "string" ? notes.slice(0, 500) : undefined,
+    existingItems: Array.isArray(existingItems) ? existingItems.map(String) : [],
+    weatherSummary: typeof weatherSummary === "string" ? weatherSummary.slice(0, 300) : undefined
   });
 
   return res.json({
@@ -286,7 +291,7 @@ router.post("/api/ai/packing-list", async (req, res) => {
 
 // 5. Collaborative Meal Suggestions (Grok Engine Exclusively)
 router.post("/api/ai/meal-suggestions", async (req, res) => {
-  const { destination, season, groupSize, activities } = req.body;
+  const { destination, season, groupSize, activities, preferences, existingMeals, daysCount } = req.body;
   const destName = destination || "Campground";
   const numCampers = groupSize || 6;
   const actList = Array.isArray(activities) ? activities : [];
@@ -295,7 +300,10 @@ router.post("/api/ai/meal-suggestions", async (req, res) => {
     destination: destName,
     season: season || "Summer",
     groupSize: numCampers,
-    activities: actList
+    activities: actList,
+    preferences: typeof preferences === "string" ? preferences.slice(0, 500) : undefined,
+    existingMeals: Array.isArray(existingMeals) ? existingMeals.map(String) : [],
+    daysCount: Number(daysCount) || undefined
   });
 
   return res.json({

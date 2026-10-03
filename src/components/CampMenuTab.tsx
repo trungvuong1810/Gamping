@@ -123,7 +123,7 @@ export const CampMenuTab: React.FC<CampMenuTabProps> = ({
               className="bg-[#D6B588] hover:bg-[#c9a676] text-white font-bold text-xs uppercase tracking-wider px-4 py-2.5 border border-black transition-all cursor-pointer flex items-center gap-1.5 shadow-xs"
             >
               <Sparkles className="w-4 h-4" />
-              <span>Grok 4.6 Campfire Meal Ideas</span>
+              <span>Grok Campfire Meal Ideas</span>
             </button>
 
             <button
@@ -200,7 +200,7 @@ export const CampMenuTab: React.FC<CampMenuTabProps> = ({
               <div className="p-6">
                 {dayMeals.length === 0 ? (
                   <div className="text-center py-6 text-xs text-black/50 border border-black/20 bg-neutral-50">
-                    No meals scheduled yet for {day}. Use "Add to {day}" or ask Grok 4.6 for campfire recipes.
+                    No meals scheduled yet for {day}. Use "Add to {day}" or ask Grok for campfire recipes.
                   </div>
                 ) : (
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -427,7 +427,7 @@ export const CampMenuTab: React.FC<CampMenuTabProps> = ({
         </div>
       )}
 
-      {/* Grok 4.6 Culinary Modal */}
+      {/* Grok Culinary Modal */}
       <GrokMealModal
         isOpen={isGrokModalOpen}
         onClose={() => setIsGrokModalOpen(false)}

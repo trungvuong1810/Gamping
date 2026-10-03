@@ -122,7 +122,7 @@ export const GearChecklistTab: React.FC<GearChecklistTabProps> = ({
               className="bg-[#D6B588] hover:bg-[#c9a676] text-white font-bold text-xs uppercase tracking-wider px-4 py-2.5 border border-black transition-all cursor-pointer flex items-center gap-1.5 shadow-xs"
             >
               <Sparkles className="w-4 h-4" />
-              <span>Grok 4.6 AI Packing Suggestions</span>
+              <span>Grok AI Packing Suggestions</span>
             </button>
 
             <button
@@ -242,7 +242,7 @@ export const GearChecklistTab: React.FC<GearChecklistTabProps> = ({
             <Backpack className="w-8 h-8 text-black/40 mx-auto" />
             <h4 className="font-bold text-black text-sm uppercase">No gear items found</h4>
             <p className="text-xs text-black/70 max-w-sm mx-auto">
-              Add custom items or use Grok 4.6 AI Packing Suggestions to automatically generate a complete camping gear checklist.
+              Add custom items or use Grok AI Packing Suggestions to automatically generate a complete camping gear checklist.
             </p>
             <button
               type="button"
@@ -250,7 +250,7 @@ export const GearChecklistTab: React.FC<GearChecklistTabProps> = ({
               className="bg-[#D6B588] hover:bg-[#c9a676] text-white font-bold text-xs uppercase px-5 py-2.5 border border-black transition-all cursor-pointer shadow-xs inline-flex items-center gap-2"
             >
               <Sparkles className="w-4 h-4" />
-              <span>Generate Gear with Grok 4.6</span>
+              <span>Generate Gear with Grok</span>
             </button>
           </div>
         ) : (
@@ -434,7 +434,7 @@ export const GearChecklistTab: React.FC<GearChecklistTabProps> = ({
         </div>
       )}
 
-      {/* Grok 4.6 Gear Suggestion Modal */}
+      {/* Grok Gear Suggestion Modal */}
       <GrokGearModal
         isOpen={isGrokModalOpen}
         onClose={() => setIsGrokModalOpen(false)}

@@ -41,7 +41,7 @@ export const MealIdeasModal: React.FC<MealIdeasModalProps> = ({
       });
       setIdeas(res.meals);
     } catch (err: any) {
-      setErrorMsg(err.message || 'Failed to fetch meal ideas from Grok 4.6');
+      setErrorMsg(err.message || 'Failed to fetch meal ideas from Grok');
     } finally {
       setIsGenerating(false);
     }
@@ -98,14 +98,14 @@ export const MealIdeasModal: React.FC<MealIdeasModalProps> = ({
             <div className="flex items-center gap-2 mb-1">
               <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-semibold tracking-wide uppercase bg-neutral-900 text-white font-mono">
                 <Sparkles className="w-3 h-3 text-amber-300" />
-                AI Engine: Grok 4.6 only
+                AI Engine: Grok only
               </span>
               <span className="text-xs text-neutral-500 font-medium">
                 Camp Menu Brainstorming
               </span>
             </div>
             <h2 className="text-xl font-bold tracking-tight text-neutral-950">
-              Grok 4.6 Camping Meal Inspiration
+              Grok Camping Meal Inspiration
             </h2>
             <p className="text-xs text-neutral-500 mt-0.5">
               Hearty, cast-iron & portable recipes optimized for campsite cooking, categorized by meal time.
@@ -139,7 +139,7 @@ export const MealIdeasModal: React.FC<MealIdeasModalProps> = ({
                   Generate Curated Camp Recipes
                 </h3>
                 <p className="text-xs text-neutral-500 mt-1 leading-relaxed">
-                  Grok 4.6 will generate campfire breakfasts, midday trail lunches, hearty skillet dinners, and high-energy trail snacks.
+                  Grok will generate campfire breakfasts, midday trail lunches, hearty skillet dinners, and high-energy trail snacks.
                 </p>
               </div>
 
@@ -149,7 +149,7 @@ export const MealIdeasModal: React.FC<MealIdeasModalProps> = ({
                 className="px-5 py-2.5 rounded-xl bg-neutral-950 text-white text-xs font-semibold hover:bg-neutral-800 transition inline-flex items-center gap-2 shadow-sm"
               >
                 <Sparkles className={`w-4 h-4 text-amber-300 ${isGenerating ? 'animate-spin' : ''}`} />
-                <span>{isGenerating ? 'Grok 4.6 Designing Menu...' : 'Generate Meal Suggestions'}</span>
+                <span>{isGenerating ? 'Grok Designing Menu...' : 'Generate Meal Suggestions'}</span>
               </button>
             </div>
           ) : (

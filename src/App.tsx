@@ -293,7 +293,7 @@ export default function App() {
     }
   };
 
-  // Batch add equipment from Grok 4.6
+  // Batch add equipment from Grok
   const handleBatchAddEquipment = async (
     items: Array<{ name: string; category: PackingCategory; groupId: string; notes: string; aiSuggested: boolean }>
   ) => {
@@ -526,7 +526,7 @@ export default function App() {
               <CloudSun className="w-6 h-6 text-black" />
               <h3 className="font-black uppercase text-sm text-black">Google Weather & Grok AI</h3>
               <p className="text-xs text-black/70 leading-relaxed">
-                Live campground weather forecasts and Grok 4.6 AI suggestions for gear checklists and campfire culinary recipes.
+                Live campground weather forecasts and Grok AI suggestions for gear checklists and campfire culinary recipes.
               </p>
             </div>
           </div>

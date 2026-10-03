@@ -380,7 +380,7 @@ export const CampOverviewTab: React.FC<CampOverviewTabProps> = ({
 
           {/* Quick AI Grok Assistant Card */}
           <div className="border border-black p-6 bg-white space-y-3">
-            <h3 className="font-bold text-black text-sm uppercase tracking-wider">Grok 4.6 Expedition AI</h3>
+            <h3 className="font-bold text-black text-sm uppercase tracking-wider">Grok Expedition AI</h3>
             <p className="text-xs text-black/80 leading-relaxed">
               Generate gear checklists and campfire culinary menus tailored to your campground's terrain, weather, and party size.
             </p>

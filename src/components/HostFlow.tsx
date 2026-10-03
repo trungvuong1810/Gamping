@@ -50,7 +50,7 @@ export const HostFlow: React.FC<HostFlowProps> = ({
   const [newFriendEmail, setNewFriendEmail] = useState('');
   const [newFriendName, setNewFriendName] = useState('');
 
-  // Step 3: Booking (Grok 4.6) state
+  // Step 3: Booking (Grok) state
   const [startingLocation, setStartingLocation] = useState('Toronto, ON');
   const [startingCoordinates, setStartingCoordinates] = useState<{ lat: number; lng: number } | undefined>();
   const [activities, setActivities] = useState<string[]>(['Hiking', 'Canoeing & Portage', 'Campfire Cooking']);
@@ -120,7 +120,7 @@ export const HostFlow: React.FC<HostFlowProps> = ({
     }
   };
 
-  // Quick suggestion chips for Grok 4.6 booking
+  // Quick suggestion chips for Grok booking
   const quickSuggestions = [
     {
       label: 'Family-friendly lakefront within 3 hrs',
@@ -287,7 +287,7 @@ export const HostFlow: React.FC<HostFlowProps> = ({
           </div>
           <span className="text-neutral-300">/</span>
           <div className={`px-2.5 py-1 rounded-md text-xs font-medium ${step === 3 ? 'bg-neutral-950 text-white' : 'bg-neutral-100 text-neutral-600'}`}>
-            3. Grok 4.6 Booking
+            3. Grok Booking
           </div>
         </div>
       </div>
@@ -686,7 +686,7 @@ export const HostFlow: React.FC<HostFlowProps> = ({
                 onClick={() => setStep(3)}
                 className="flex items-center gap-2 px-5 py-2.5 bg-neutral-950 text-white rounded-lg hover:bg-neutral-800 transition text-xs font-medium"
               >
-                <span>Proceed to Grok 4.6 Booking</span>
+                <span>Proceed to Grok Booking</span>
                 <ArrowRight className="w-4 h-4" />
               </button>
             </div>
@@ -703,7 +703,7 @@ export const HostFlow: React.FC<HostFlowProps> = ({
               <Sparkles className="w-3.5 h-3.5" />
             </div>
             <h2 className="text-2xl font-semibold tracking-tight text-neutral-950">
-              Grok 4.6 Trip Intelligence
+              Grok Trip Intelligence
             </h2>
           </div>
           <p className="text-xs sm:text-sm text-neutral-500 mb-6">
@@ -783,7 +783,7 @@ export const HostFlow: React.FC<HostFlowProps> = ({
                 id="host-departure-point-input"
               />
               <p className="text-[11px] text-neutral-500 mt-1">
-                Grok 4.6 enforces a strict driving radius originating directly from this location to recommend authentic, reachable campsites.
+                Grok enforces a strict driving radius originating directly from this location to recommend authentic, reachable campsites.
               </p>
             </div>
 
@@ -827,7 +827,7 @@ export const HostFlow: React.FC<HostFlowProps> = ({
                 className="flex items-center gap-2 px-4 py-2 text-xs font-medium border border-neutral-950 bg-white hover:bg-neutral-50 text-neutral-950 rounded-lg transition"
               >
                 <Sparkles className="w-3.5 h-3.5" />
-                <span>{isAiLoading ? 'Grok 4.6 analyzing...' : 'Re-run Grok 4.6 Engine'}</span>
+                <span>{isAiLoading ? 'Grok analyzing...' : 'Re-run Grok Engine'}</span>
               </button>
             </div>
           </div>
@@ -854,7 +854,7 @@ export const HostFlow: React.FC<HostFlowProps> = ({
             {isAiLoading ? (
               <div className="p-8 border border-neutral-200 rounded-xl text-center bg-neutral-50/50">
                 <div className="inline-block animate-spin w-5 h-5 border-2 border-neutral-950 border-t-transparent rounded-full mb-2"></div>
-                <div className="text-xs font-medium text-neutral-700">Grok 4.6 synthesizing 10 verified regional campgrounds...</div>
+                <div className="text-xs font-medium text-neutral-700">Grok synthesizing 10 verified regional campgrounds...</div>
                 <div className="text-[11px] text-neutral-400 mt-1">Cross-referencing drive distance, water access, site capacity, and seasonal rules</div>
               </div>
             ) : recommendedParks.length > 0 ? (

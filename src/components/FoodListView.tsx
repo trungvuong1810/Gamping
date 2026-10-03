@@ -290,7 +290,7 @@ export const FoodListView: React.FC<FoodListViewProps> = ({
               className="px-3.5 py-2 text-xs font-semibold bg-neutral-900 text-white hover:bg-neutral-800 rounded-xl transition flex items-center gap-1.5 shadow-xs"
             >
               <Sparkles className="w-3.5 h-3.5 text-amber-300" />
-              <span>Grok 4.6 Menu Ideas</span>
+              <span>Grok Menu Ideas</span>
             </button>
 
             <button
@@ -892,7 +892,7 @@ export const FoodListView: React.FC<FoodListViewProps> = ({
               </div>
               <div className="text-xs text-neutral-400 max-w-sm mx-auto mt-1">
                 {selectedMealTime !== 'all'
-                  ? `There are no ${selectedMealTime} dishes planned yet. Click "Suggest a Dish" or use "Grok 4.6 Menu Ideas" to start.`
+                  ? `There are no ${selectedMealTime} dishes planned yet. Click "Suggest a Dish" or use "Grok Menu Ideas" to start.`
                   : 'Start planning camp meals together so everyone knows what to pack and cook.'}
               </div>
             </div>
@@ -904,7 +904,7 @@ export const FoodListView: React.FC<FoodListViewProps> = ({
                   className="px-3.5 py-1.5 rounded-lg bg-neutral-900 text-white text-xs font-semibold hover:bg-neutral-800 transition flex items-center gap-1.5"
                 >
                   <Sparkles className="w-3 h-3 text-amber-300" />
-                  <span>Grok 4.6 Menu Ideas</span>
+                  <span>Grok Menu Ideas</span>
                 </button>
                 <button
                   onClick={() => setShowAddForm(true)}
@@ -918,7 +918,7 @@ export const FoodListView: React.FC<FoodListViewProps> = ({
         )}
       </div>
 
-      {/* Grok 4.6 Meal Ideas Modal */}
+      {/* Grok Meal Ideas Modal */}
       <MealIdeasModal
         trip={trip}
         currentUser={currentUser}

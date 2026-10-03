@@ -44,10 +44,10 @@ export const EquipmentView: React.FC<EquipmentViewProps> = ({
   const [showAddForm, setShowAddForm] = useState(false);
   const [isAdding, setIsAdding] = useState(false);
 
-  // Grok 4.6 Suggested Packing List Modal state
+  // Grok Suggested Packing List Modal state
   const [showPackingModal, setShowPackingModal] = useState(false);
 
-  // AI draft state (Grok 4.6)
+  // AI draft state (Grok)
   const [isAiDrafting, setIsAiDrafting] = useState(false);
   const [aiDraftItems, setAiDraftItems] = useState<Array<{ name: string; category: string; notes: string }> | null>(null);
   const [selectedDraftIndices, setSelectedDraftIndices] = useState<number[]>([]);
@@ -127,7 +127,7 @@ export const EquipmentView: React.FC<EquipmentViewProps> = ({
     }
   };
 
-  // Trigger Grok 4.6 gear draft
+  // Trigger Grok gear draft
   const handleRunAiDraft = async () => {
     if (!canEditSelectedGroup) return;
     setIsAiDrafting(true);
@@ -245,7 +245,7 @@ export const EquipmentView: React.FC<EquipmentViewProps> = ({
               className="px-3 py-1.5 text-xs font-semibold bg-neutral-900 text-white hover:bg-neutral-800 rounded-lg transition flex items-center gap-1.5 shadow-xs"
             >
               <Sparkles className="w-3.5 h-3.5 text-amber-300" />
-              <span>Grok 4.6 Packing List</span>
+              <span>Grok Packing List</span>
             </button>
 
             <button
@@ -274,14 +274,14 @@ export const EquipmentView: React.FC<EquipmentViewProps> = ({
         </div>
       )}
 
-      {/* Grok 4.6 AI Equipment Draft Modal / Review Area */}
+      {/* Grok AI Equipment Draft Modal / Review Area */}
       {aiDraftItems && canEditSelectedGroup && (
         <div className="p-5 rounded-2xl border border-neutral-900 bg-neutral-50 shadow-sm animate-in fade-in">
           <div className="flex items-center justify-between mb-3">
             <div className="flex items-center gap-2">
               <Sparkles className="w-4 h-4 text-neutral-950" />
               <h4 className="text-xs font-semibold uppercase tracking-wider text-neutral-950">
-                Grok 4.6 Seasonal Equipment Draft ({aiDraftItems.length} items suggested)
+                Grok Seasonal Equipment Draft ({aiDraftItems.length} items suggested)
               </h4>
             </div>
             <button
@@ -564,7 +564,7 @@ export const EquipmentView: React.FC<EquipmentViewProps> = ({
         )}
       </div>
 
-      {/* Grok 4.6 Suggested Packing List Modal */}
+      {/* Grok Suggested Packing List Modal */}
       <PackingListModal
         trip={trip}
         currentUser={currentUser}

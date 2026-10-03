@@ -147,10 +147,10 @@ export const PackingListModal: React.FC<PackingListModalProps> = ({
         setSuggestedItems(res.items);
         setSelectedItemIndices(res.items.map((_, i) => i));
       } else {
-        throw new Error('Invalid equipment data format received from Grok 4.6.');
+        throw new Error('Invalid equipment data format received from Grok.');
       }
     } catch (err: any) {
-      setErrorMsg(err.message || 'Failed to generate packing list with Grok 4.6');
+      setErrorMsg(err.message || 'Failed to generate packing list with Grok');
     } finally {
       setIsGenerating(false);
     }
@@ -247,7 +247,7 @@ export const PackingListModal: React.FC<PackingListModalProps> = ({
     if (weatherReport?.summary) {
       text += `Weather Forecast: ${weatherReport.summary}\n`;
     }
-    text += `AI Engine: Grok 4.6 only\n\n`;
+    text += `AI Engine: Grok only\n\n`;
 
     categories.forEach(cat => {
       const catItems = suggestedItems.filter(item => item.category === cat);
@@ -310,7 +310,7 @@ export const PackingListModal: React.FC<PackingListModalProps> = ({
             <div className="flex items-center gap-2 mb-1 flex-wrap">
               <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-semibold tracking-wide uppercase bg-neutral-900 text-white font-mono">
                 <Sparkles className="w-3 h-3 text-amber-300" />
-                Grok 4.6 AI Packing Engine
+                Grok AI Packing Engine
               </span>
               <span className="text-xs text-neutral-500 font-medium">
                 for {groupName}
@@ -320,7 +320,7 @@ export const PackingListModal: React.FC<PackingListModalProps> = ({
               Customized Camping Packing List
             </h2>
             <p className="text-xs text-neutral-500 mt-0.5">
-              Grok 4.6 synthesizes your chosen <strong className="text-neutral-800">location</strong>, <strong className="text-neutral-800">season</strong>, and <strong className="text-neutral-800">weather forecast</strong> into gear recommendations.
+              Grok synthesizes your chosen <strong className="text-neutral-800">location</strong>, <strong className="text-neutral-800">season</strong>, and <strong className="text-neutral-800">weather forecast</strong> into gear recommendations.
             </p>
           </div>
 
@@ -404,12 +404,12 @@ export const PackingListModal: React.FC<PackingListModalProps> = ({
               <div className="text-[11px] text-neutral-600 bg-amber-50/70 border border-amber-200/60 p-2.5 rounded-lg flex items-start gap-2">
                 <Sparkles className="w-3.5 h-3.5 text-amber-600 shrink-0 mt-0.5" />
                 <div>
-                  <strong className="font-semibold text-neutral-900">Grok 4.6 Customization: </strong>
+                  <strong className="font-semibold text-neutral-900">Grok Customization: </strong>
                   {forecastHighlight && forecastHighlight.minTemp < 10
                     ? `Night temperatures dropping to ${forecastHighlight.minTemp}°C require thermal sleeping bags, insulated R-Value 3.5+ pads, and layered fleece.`
                     : forecastHighlight && forecastHighlight.maxRain > 25
                     ? `Precipitation risk of ${forecastHighlight.maxRain}% mandates seam-sealed rain flys, waterproof dry bags, and pack covers.`
-                    : `Grok 4.6 tailors clothing warmth, rain fly specs, and shelter ratings to ${destination} in ${season}.`}
+                    : `Grok tailors clothing warmth, rain fly specs, and shelter ratings to ${destination} in ${season}.`}
                 </div>
               </div>
             </div>
@@ -457,7 +457,7 @@ export const PackingListModal: React.FC<PackingListModalProps> = ({
             {/* Planned Activities */}
             <div>
               <label className="block text-xs font-semibold text-neutral-800 mb-1.5">
-                Planned Activities <span className="text-neutral-400 font-normal">(Grok 4.6 adds activity-specific footwear & safety gear)</span>
+                Planned Activities <span className="text-neutral-400 font-normal">(Grok adds activity-specific footwear & safety gear)</span>
               </label>
               
               <div className="flex flex-wrap gap-2">
@@ -523,7 +523,7 @@ export const PackingListModal: React.FC<PackingListModalProps> = ({
             {/* Additional Notes & Generate Button */}
             <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 pt-1 border-t border-neutral-200/60">
               <div className="text-[11px] text-neutral-500">
-                Grok 4.6 categorizes into: <strong className="text-neutral-800">Shelter</strong>, <strong className="text-neutral-800">Cooking</strong>, <strong className="text-neutral-800">Clothing</strong>, and <strong className="text-neutral-800">Personal Items</strong>.
+                Grok categorizes into: <strong className="text-neutral-800">Shelter</strong>, <strong className="text-neutral-800">Cooking</strong>, <strong className="text-neutral-800">Clothing</strong>, and <strong className="text-neutral-800">Personal Items</strong>.
               </div>
 
               <button
@@ -534,7 +534,7 @@ export const PackingListModal: React.FC<PackingListModalProps> = ({
                 className="px-4 py-2 text-xs font-semibold bg-neutral-950 text-white rounded-xl hover:bg-neutral-800 transition flex items-center justify-center gap-2 shadow-sm shrink-0"
               >
                 <Sparkles className={`w-4 h-4 text-amber-300 ${isGenerating ? 'animate-spin' : ''}`} />
-                <span>{isGenerating ? 'Grok 4.6 Generating List...' : (suggestedItems ? 'Regenerate List' : 'Generate Suggested Packing List')}</span>
+                <span>{isGenerating ? 'Grok Generating List...' : (suggestedItems ? 'Regenerate List' : 'Generate Suggested Packing List')}</span>
               </button>
             </div>
 
@@ -719,7 +719,7 @@ export const PackingListModal: React.FC<PackingListModalProps> = ({
                 <strong>{selectedItemIndices.length}</strong> of {suggestedItems.length} items selected
               </span>
             ) : (
-              <span>Engineered specifically with Grok 4.6 weather & location prompt specs</span>
+              <span>Engineered specifically with Grok weather & location prompt specs</span>
             )}
           </div>
 

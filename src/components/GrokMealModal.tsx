@@ -141,7 +141,7 @@ export const GrokMealModal: React.FC<GrokMealModalProps> = ({
         {/* Header */}
         <div className="flex items-center justify-between pb-3 border-b border-black">
           <div>
-            <h3 className="font-black text-black text-base uppercase tracking-tight">Grok 4.6 Campfire Culinary Assistant</h3>
+            <h3 className="font-black text-black text-base uppercase tracking-tight">Grok Campfire Culinary Assistant</h3>
             <p className="text-xs text-black/70">Group-sized campfire menus and ingredient checklists</p>
           </div>
           <button
@@ -214,7 +214,7 @@ export const GrokMealModal: React.FC<GrokMealModalProps> = ({
                 {isLoading ? (
                   <>
                     <Loader2 className="w-4 h-4 animate-spin" />
-                    Generating Campfire Menus with Grok 4.6...
+                    Generating Campfire Menus with Grok...
                   </>
                 ) : (
                   <>

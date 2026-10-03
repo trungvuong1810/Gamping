@@ -77,7 +77,7 @@ export const GrokGearModal: React.FC<GrokGearModalProps> = ({
       });
 
       if (!res.ok) {
-        throw new Error('Failed to retrieve Grok 4.6 suggestions');
+        throw new Error('Failed to retrieve Grok suggestions');
       }
 
       const data = await res.json();
@@ -139,7 +139,7 @@ export const GrokGearModal: React.FC<GrokGearModalProps> = ({
         {/* Header */}
         <div className="flex items-center justify-between pb-3 border-b border-black">
           <div>
-            <h3 className="font-black text-black text-base uppercase tracking-tight">Grok 4.6 Gear Intelligence</h3>
+            <h3 className="font-black text-black text-base uppercase tracking-tight">Grok Gear Intelligence</h3>
             <p className="text-xs text-black/70">Destination & weather tailored packing recommendations</p>
           </div>
           <button
@@ -226,7 +226,7 @@ export const GrokGearModal: React.FC<GrokGearModalProps> = ({
                 {isLoading ? (
                   <>
                     <Loader2 className="w-4 h-4 animate-spin" />
-                    Consulting Grok 4.6 Engine for {destination}...
+                    Consulting Grok Engine for {destination}...
                   </>
                 ) : (
                   <>

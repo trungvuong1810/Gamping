@@ -6,3 +6,6 @@ coverage/
 *.log
 .env*
 !.env.example
+
+# Local JSON datastore (runtime data, never commit)
+data/

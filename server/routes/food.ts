@@ -1,6 +1,6 @@
 import express from "express";
 import { supabaseServer, supabaseUpsertFood, supabaseDeleteFood } from "../supabase.js";
-import { db, saveDb, isTripPast } from "../storage.js";
+import { db, saveDb, isTripPast, cookToPreparers } from "../storage.js";
 import { canUserEditGroup } from "./equipment.js";
 import type { Trip } from "../../src/types.js";
 
@@ -76,7 +76,7 @@ router.post("/api/trips/:id/food", async (req, res) => {
     ingredientsOrItems: ingredientsOrItems || "",
     cookOrBringer: cookOrBringer || (preparers && preparers.length > 0 ? preparers[0].name : userName),
     suggestedBy: suggestedBy || { userId, name: userName },
-    preparers: Array.isArray(preparers) ? preparers : [],
+    preparers: Array.isArray(preparers) && preparers.length > 0 ? preparers : cookToPreparers(cookOrBringer),
     ingredientBringers: Array.isArray(ingredientBringers) ? ingredientBringers : [],
     status: "planned" as const,
     dayLabel: dayLabel || ""
@@ -202,7 +202,10 @@ router.patch("/api/trips/:id/food/:itemId", async (req, res) => {
   if (mealTime !== undefined) food.mealTime = mealTime;
   if (mealType !== undefined) food.mealType = mealType;
   if (ingredientsOrItems !== undefined) food.ingredientsOrItems = ingredientsOrItems;
-  if (cookOrBringer !== undefined) food.cookOrBringer = cookOrBringer;
+  if (cookOrBringer !== undefined) {
+    food.cookOrBringer = cookOrBringer;
+    if (preparers === undefined) food.preparers = cookToPreparers(cookOrBringer);
+  }
   if (preparers !== undefined && Array.isArray(preparers)) food.preparers = preparers;
   if (ingredientBringers !== undefined && Array.isArray(ingredientBringers)) food.ingredientBringers = ingredientBringers;
   if (status !== undefined) food.status = status;

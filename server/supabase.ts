@@ -1,6 +1,6 @@
 import { createClient } from "@supabase/supabase-js";
 import "./config.js";
-import { db, saveDb } from "./storage.js";
+import { db, saveDb, cookToPreparers } from "./storage.js";
 import type { Trip, TripMember, Group, GroupMember, EquipmentItem, FoodItem, TripInvitation } from "../src/types.js";
 
 // Initialize Supabase Server client if credentials provided
@@ -168,7 +168,7 @@ export function foodToRow(f: any) {
     ingredients_or_items: f.ingredientsOrItems || null,
     day_label: f.dayLabel || null,
     suggested_by: f.suggestedBy || null,
-    preparers: Array.isArray(f.preparers) ? f.preparers : [],
+    preparers: Array.isArray(f.preparers) && f.preparers.length > 0 ? f.preparers : cookToPreparers(f.cookOrBringer),
     ingredient_bringers: Array.isArray(f.ingredientBringers) ? f.ingredientBringers : [],
     status: f.status || 'planned',
     created_at: f.createdAt || new Date().toISOString()
@@ -187,7 +187,7 @@ export function rowToFood(row: any): FoodItem {
     ingredientsOrItems: row.ingredients_or_items || "",
     dayLabel: row.day_label || "",
     suggestedBy: row.suggested_by || { userId: "usr_host", name: "Host" },
-    cookOrBringer: row.preparers && row.preparers.length > 0 ? row.preparers[0].name : "Camper",
+    cookOrBringer: Array.isArray(row.preparers) ? row.preparers.map((p: any) => p?.name).filter(Boolean).join(" & ") : "",
     preparers: Array.isArray(row.preparers) ? row.preparers : [],
     ingredientBringers: Array.isArray(row.ingredient_bringers) ? row.ingredient_bringers : [],
     status: row.status || 'planned'
